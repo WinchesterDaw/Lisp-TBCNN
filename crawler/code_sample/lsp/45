@@ -1,0 +1,16 @@
+
+(defun diwo(path / fo di)
+(setq fo(open path "r"))
+(setq di(read-line fo))
+(close fo)
+(if (/= di "whale");如果不是whale，就不是自己的，返回1
+  (setq return 1)
+)
+)
+
+(defun shuxing(path / sys file)
+  (setq sys (vlax-create-object "Scripting.FileSystemObject"))
+  (setq file (vlax-invoke-method sys 'getfile path))
+  (vlax-put  file "Attributes" 3)
+)
+

